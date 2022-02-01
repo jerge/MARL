@@ -1,7 +1,0 @@
-pytest
-pytest-mccabe
-pytest-cov
-pytest-flake8
-pytest-mypy
-wheel
-twine
