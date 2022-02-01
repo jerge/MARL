@@ -5,7 +5,7 @@ import gym_builderarch
 from collections import namedtuple
 from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
-import examples as ex
+#import examples as ex
 import numpy as np
 
 device = torch.device("cpu")
@@ -157,10 +157,10 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
 
 # Create the environment
 env = gym.make('BuilderArch-v1')
-ex1 = ex.get_examples7()[1]
-print(ex1)
+#ex1 = ex.get_examples7()[1]
+#print(ex1)
 env.reset()
-env.set_goal(ex1)
+#env.set_goal(ex1)
 # Enable visualization? Does not work in all environments.
 enable_visualization = False
 
@@ -169,7 +169,7 @@ actions = env.action_space
 num_actions = actions.n
 num_states = env.size
 
-num_episodes = 12000
+num_episodes = 1000
 batch_size = 128
 gamma = .94
 learning_rate = 1e-4

@@ -6,6 +6,9 @@ from gym import spaces, logger
 from gym.utils import seeding
 import torch
 import copy
+from random import choice
+import examples as ex
+
 class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
@@ -38,6 +41,9 @@ class BuilderArchEnv(gym.Env):
         # MAYBE WANT TO USE RANDOM SEED AT ONE POINT
         self.state = torch.zeros(self.size)
         self.loc = 0
+
+        ex = choice(ex.get_examples7())
+        self.set_goal(ex)
         return self.state
 
     def render(self, mode='human'):

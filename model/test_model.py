@@ -1,5 +1,5 @@
 import gym
-import examples as ex
+#import examples as ex
 import torch
 import random
 import dqn_model
@@ -23,9 +23,9 @@ def calc_q_and_take_action(dqn, state, eps):
 
 env = gym.make('BuilderArch-v1')
 env.reset()
-ex1 = ex.get_examples7()[4]
-print(ex1)
-env.set_goal(ex1)
+#ex1 = ex.get_examples7()[4]
+#print(ex1)
+#env.set_goal(ex1)
 device = torch.device("cpu")
 actions = env.action_space
 num_actions = actions.n
