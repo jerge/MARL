@@ -28,7 +28,7 @@ print(ex1)
 env.set_goal(ex1)
 device = torch.device("cpu")
 actions = env.action_space
-num_actions = actions[0].n * actions[1].n
+num_actions = actions.n
 num_states = env.size
 
 num_episodes = 3000
@@ -37,7 +37,7 @@ gamma = .94
 learning_rate = 1e-4
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-mod = dqn.online_model.load_state_dict(torch.load("./l.asdf"))
+mod = dqn.online_model.load_state_dict(torch.load("./model1.saved"))
 
 done = False
 while not done:

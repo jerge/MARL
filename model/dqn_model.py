@@ -75,12 +75,12 @@ class QNetwork(nn.Module):
         # (Batch, Number Channels, height, width)
         out_channels = 3
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1,out_channels, kernel_size=3, stride=1, padding=1), #num_states[0], num_states[1]
+            nn.Conv2d(1,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Dropout(p=1 - keep_prob))
         self.layer2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
