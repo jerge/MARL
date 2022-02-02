@@ -78,7 +78,7 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
     # YOUR CODE HERE
     q_online_curr = dqn.online_model(curr_state)
     with torch.no_grad():
-        q_offline_next = (dqn.offline_model(next_state))
+        q_offline_next = dqn.offline_model(next_state)
     
     q_target = calculate_q_targets(q_offline_next, reward, nonterminal, gamma=gamma)
     loss = dqn.calc_loss(q_online_curr, q_target, curr_action)
@@ -119,7 +119,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             
             # Assess whether terminal state was reached.
             # The episode may end due to having reached 200 steps, but we should not regard this as reaching the terminal state, and hence not disregard Q(s',a) from the Q target.
-            nonterminal_to_buffer = not finish_episode or steps == 200
+            nonterminal_to_buffer = not finish_episode or steps == 50
             
             # Store experienced transition to replay buffer
             replay_buffer.add(Transition(s=state, a=curr_action, r=reward, next_s=new_state, t=nonterminal_to_buffer))
@@ -169,7 +169,7 @@ actions = env.action_space
 num_actions = actions.n
 num_states = env.size
 
-num_episodes = 1000
+num_episodes = 2000
 batch_size = 128
 gamma = .94
 learning_rate = 1e-4

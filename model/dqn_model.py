@@ -126,8 +126,8 @@ class DeepQLearningModel(object):
         # Define the two Q-networks
         self.online_model = QNetwork(self._num_states,
                                      self._num_actions).to(device=self._device)
-        self.offline_model = QNetwork(
-            self._num_states, self._num_actions).to(device=self._device)
+        self.offline_model = QNetwork(self._num_states, 
+                                      self._num_actions).to(device=self._device)
 
         # Define optimizer. Should update online network parameters only.
         self.optimizer = torch.optim.RMSprop(self.online_model.parameters(),
