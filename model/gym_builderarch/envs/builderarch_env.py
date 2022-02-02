@@ -50,7 +50,8 @@ class BuilderArchEnv(gym.Env):
         self.state = torch.zeros(self.size)
         self.loc = 0
         self.steps = 0
-        ex = random.choice(get_easy_examples7())
+        #ex = random.choice(get_easy_examples7()[1])
+        ex = get_easy_examples7()[4][1]
         self.set_goal(ex)
         return self.state
 
@@ -100,6 +101,9 @@ class BuilderArchEnv(gym.Env):
             return 0
         diff_state = (self.state - prev_state)
         return torch.sum(self.goal * (diff_state) * 2- diff_state)
+    
+    def get_all_examples(self):
+        return get_examples7()
 
 # TODO: PLEASE FIX
 def get_examples7():
@@ -113,7 +117,7 @@ def get_examples7():
                         [1,0,0,0,0,0,0],
                         [1,0,0,0,0,0,0],
                         [1,1,1,1,0,0,0]],dtype=torch.int32)
-    examples7.append(l1)
+    examples7.append(("l1",l1))
 
     l2 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -122,7 +126,7 @@ def get_examples7():
                         [0,1,0,0,0,0,0],
                         [0,1,0,0,0,0,0],
                         [0,1,1,1,1,0,0]],dtype=torch.int32)
-    examples7.append(l2)
+    examples7.append(("l2",l2))
 
     l3 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -131,7 +135,7 @@ def get_examples7():
                         [0,0,1,0,0,0,0],
                         [0,0,1,0,0,0,0],
                         [0,0,1,1,1,1,0]],dtype=torch.int32)
-    examples7.append(l3)
+    examples7.append(("l3",l3))
 
     l4 =  torch.tensor([[0,0,0,0,0,0,0,],
                         [0,0,0,0,0,0,0,],
@@ -140,7 +144,7 @@ def get_examples7():
                         [0,0,0,1,0,0,0,],
                         [0,0,0,1,0,0,0,],
                         [0,0,0,1,1,1,1,]],dtype=torch.int32)
-    examples7.append(l4)
+    examples7.append(("l4",l4))
 
     l1r =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -149,7 +153,7 @@ def get_examples7():
                         [0,0,0,1,0,0,0],
                         [0,0,0,1,0,0,0],
                         [1,1,1,1,0,0,0]],dtype=torch.int32)
-    examples7.append(l1r)
+    examples7.append(("l1r",l1r))
 
     l2r =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -158,7 +162,7 @@ def get_examples7():
                         [0,0,0,0,1,0,0],
                         [0,0,0,0,1,0,0],
                         [0,1,1,1,1,0,0]],dtype=torch.int32)
-    examples7.append(l2r)
+    examples7.append(("l2r",l2r))
 
     l3r =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -167,7 +171,7 @@ def get_examples7():
                         [0,0,0,0,0,1,0],
                         [0,0,0,0,0,1,0],
                         [0,0,1,1,1,1,0]],dtype=torch.int32)
-    examples7.append(l3r)
+    examples7.append(("l3r",l3r))
 
     l4r =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -176,7 +180,7 @@ def get_examples7():
                         [0,0,0,0,0,0,1],
                         [0,0,0,0,0,0,1],
                         [0,0,0,1,1,1,1]],dtype=torch.int32)
-    examples7.append(l4r)
+    examples7.append(("l4r",l4r))
 
 
     u4 =  torch.tensor([[0,0,0,0,0,0,0],
@@ -186,7 +190,7 @@ def get_examples7():
                         [0,0,0,1,0,0,1],
                         [0,0,0,1,0,0,1],
                         [0,0,0,1,1,1,1]],dtype=torch.int32)
-    examples7.append(u4)
+    examples7.append(("u4",u4))
 
     u3 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -195,7 +199,7 @@ def get_examples7():
                         [0,0,1,0,0,1,0],
                         [0,0,1,0,0,1,0],
                         [0,0,1,1,1,1,0]],dtype=torch.int32)
-    examples7.append(u3)
+    examples7.append(("u3",u3))
 
     u2 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -204,7 +208,7 @@ def get_examples7():
                         [0,1,0,0,1,0,0],
                         [0,1,0,0,1,0,0],
                         [0,1,1,1,1,0,0]],dtype=torch.int32)
-    examples7.append(u2)
+    examples7.append(("u2",u2))
 
     u1 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -213,16 +217,16 @@ def get_examples7():
                         [1,0,0,1,0,0,0],
                         [1,0,0,1,0,0,0],
                         [1,1,1,1,0,0,0]],dtype=torch.int32)
-    examples7.append(u1)
+    examples7.append(("u1",u1))
 
     pi1 = copy.deepcopy(u1).T.T
     pi2 = copy.deepcopy(u2).T.T
     pi3 = copy.deepcopy(u3).T.T
     pi4 = copy.deepcopy(u4).T.T
-    examples7.append(pi1)
-    examples7.append(pi2)
-    examples7.append(pi3)
-    examples7.append(pi4)
+    examples7.append(("pi1",pi1))
+    examples7.append(("pi2",pi2))
+    examples7.append(("pi3",pi3))
+    examples7.append(("pi4",pi4))
     # def one_zero(loc):
     #     o = torch.ones(size,dtype=torch.int32)
     #     o[loc] = 0
@@ -237,7 +241,7 @@ def get_examples7():
                         [1,1,1,1,0,0,0],
                         [1,0,0,1,0,0,0],
                         [1,0,0,1,0,0,0]],dtype=torch.int32)
-    examples7.append(H1)
+    examples7.append(("H1",H1))
 
     H2 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -246,7 +250,7 @@ def get_examples7():
                         [0,1,1,1,1,0,0],
                         [0,1,0,0,1,0,0],
                         [0,1,0,0,1,0,0]],dtype=torch.int32)
-    examples7.append(H2)
+    examples7.append(("H2",H2))
 
     H3 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -255,7 +259,7 @@ def get_examples7():
                         [0,0,1,1,1,1,0],
                         [0,0,1,0,0,1,0],
                         [0,0,1,0,0,1,0]],dtype=torch.int32)
-    examples7.append(H3)
+    examples7.append(("H3",H3))
 
     H4 =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -264,10 +268,10 @@ def get_examples7():
                         [0,0,0,1,1,1,1],
                         [0,0,0,1,0,0,1],
                         [0,0,0,1,0,0,1]],dtype=torch.int32)
-    examples7.append(H4)
+    examples7.append(("H4",H4))
 
     Ht3 = copy.deepcopy(H4).T
-    examples7.append(Ht3)
+    examples7.append(("Ht3",Ht3))
     Ht2 = torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -275,7 +279,7 @@ def get_examples7():
                         [0,0,0,1,0,0,0],
                         [0,0,0,1,0,0,0],
                         [0,1,1,1,1,1,0]], dtype=torch.int32)
-    examples7.append(Ht2)
+    examples7.append(("Ht2",Ht2))
 
     Ht1 = torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -284,7 +288,7 @@ def get_examples7():
                         [0,0,1,0,0,0,0],
                         [0,0,1,0,0,0,0],
                         [1,1,1,1,1,0,0]], dtype=torch.int32)
-    examples7.append(Ht1)
+    examples7.append(("Ht1",Ht1))
 
     t2 = torch.tensor([[0,0,0,0,0,0,0],
                        [0,1,1,1,1,1,1],
@@ -293,7 +297,7 @@ def get_examples7():
                        [0,0,0,1,1,0,0],
                        [0,0,0,1,1,0,0],
                        [0,0,0,1,1,0,0]],dtype=torch.int32)
-    examples7.append(t2)
+    examples7.append(("t2",t2))
 
     t1 =  torch.tensor([[0,0,0,0,0,0,0],
                        [1,1,1,1,1,1,0],
@@ -302,10 +306,10 @@ def get_examples7():
                        [0,0,1,1,0,0,0],
                        [0,0,1,1,0,0,0],
                        [0,0,1,1,0,0,0]],dtype=torch.int32)
-    examples7.append(t1)
+    examples7.append(("t1",t1))
 
     it = copy.deepcopy(t2).T.T.index_select(0,torch.tensor([0,6,5,4,3,2,1]))
-    examples7.append(it)
+    examples7.append(("it",it))
 
     pyr =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,0,0],
@@ -314,7 +318,7 @@ def get_examples7():
                         [0,0,1,1,0,0,1],
                         [0,1,1,1,1,0,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(pyr)
+    examples7.append(("pyr",pyr))
 
     pyr2 =  torch.tensor([[0,0,0,0,0,1,1],
                         [1,1,0,0,0,0,1],
@@ -323,7 +327,7 @@ def get_examples7():
                         [1,0,1,1,0,0,1],
                         [1,1,1,1,1,0,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(pyr2)
+    examples7.append(("pyr2",pyr2))
 
     tri =  torch.tensor([[0,0,0,0,0,0,0],
                         [1,1,0,0,0,0,0],
@@ -332,7 +336,7 @@ def get_examples7():
                         [1,1,1,1,0,0,0],
                         [1,1,1,1,1,1,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(tri)
+    examples7.append(("tri",tri))
 
     trix =  torch.tensor([[1,1,0,0,0,0,0],
                         [1,1,0,0,0,0,0],
@@ -341,11 +345,11 @@ def get_examples7():
                         [1,1,1,1,0,0,0],
                         [1,1,1,1,1,1,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(trix)
+    examples7.append(("trix",trix))
 
     tri2 = copy.deepcopy(trix)
     tri2 = torch.flip(tri2, [1,0])
-    examples7.append(tri2)
+    examples7.append(("tri2",tri2))
 
 
     blo =  torch.tensor([[0,0,0,0,0,0,0],
@@ -355,7 +359,7 @@ def get_examples7():
                         [1,1,1,1,0,0,0],
                         [1,1,1,1,1,1,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(blo)
+    examples7.append(("blo",blo))
 
 
     pin3 =  torch.tensor([[0,0,0,1,1,0,0],
@@ -365,7 +369,7 @@ def get_examples7():
                         [1,1,1,1,0,0,1],
                         [1,1,1,1,1,1,1],
                         [1,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(pin3)
+    examples7.append(("pin3",pin3))
 
     shapa =  torch.tensor([[0,0,0,1,1,0,0],
                         [0,0,1,1,0,0,0],
@@ -374,7 +378,7 @@ def get_examples7():
                         [0,1,1,1,0,0,1],
                         [0,1,1,1,1,1,1],
                         [0,1,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(shapa)
+    examples7.append(("shapa",shapa))
 
 
     shapab =  torch.tensor([[0,0,0,1,1,0,0],
@@ -384,7 +388,7 @@ def get_examples7():
                         [1,1,1,1,0,0,1],
                         [1,0,1,1,1,1,1],
                         [1,0,1,1,1,1,1]], dtype=torch.int32)
-    examples7.append(shapab)
+    examples7.append(("shapab",shapab))
 
     mill =  torch.tensor([[0,0,1,1,0,0,0],
                           [0,0,0,1,0,1,1],
@@ -393,7 +397,7 @@ def get_examples7():
                           [1,1,1,1,0,0,0],
                           [1,0,0,1,0,0,0],
                           [1,0,0,1,1,1,0]], dtype=torch.int32)
-    examples7.append(mill)
+    examples7.append(("mill",mill))
 
 
     arch =  torch.tensor([[0,0,1,1,0,0,0],
@@ -403,7 +407,7 @@ def get_examples7():
                           [1,1,0,0,0,1,1],
                           [1,0,0,0,0,0,1],
                           [1,0,0,0,0,0,1]],dtype=torch.int32)
-    examples7.append(arch)
+    examples7.append(("arch",arch))
 
     arch2 = torch.tensor([[0,0,0,1,1,0,0],
                         [0,1,1,0,1,1,0],
@@ -412,7 +416,7 @@ def get_examples7():
                         [1,1,0,0,0,1,1],
                         [1,0,0,0,0,0,1],
                         [1,0,0,0,0,0,1]],dtype=torch.int32)
-    examples7.append(arch2)
+    examples7.append(("arch2",arch2))
 
     archb =  torch.tensor([[0,0,1,1,0,0,0],
                         [0,1,1,0,1,1,0],
@@ -421,7 +425,7 @@ def get_examples7():
                         [1,1,0,0,0,1,1],
                         [1,0,0,1,1,0,1],
                         [1,0,0,1,1,0,1]],dtype=torch.int32)
-    examples7.append(archb)
+    examples7.append(("archb",archb))
 
     hinv =  torch.tensor([[0,0,0,0,0,0,0],
                         [0,0,0,0,1,0,0],
@@ -430,7 +434,7 @@ def get_examples7():
                         [0,0,1,1,1,0,0],
                         [0,0,1,0,1,0,0],
                         [0,0,1,0,1,0,0]],dtype=torch.int32)
-    examples7.append(hinv)
+    examples7.append(("hinv",hinv))
 
 
     hbas =  torch.tensor([[0,0,0,0,0,0,0],
@@ -440,7 +444,7 @@ def get_examples7():
                         [0,0,1,1,1,0,0],
                         [0,0,1,0,1,0,0],
                         [0,0,1,0,1,0,0]],dtype=torch.int32)
-    examples7.append(hbas)
+    examples7.append(("hbas",hbas))
 
 
     brig =  torch.tensor([[0,0,0,0,0,0,0],
@@ -450,16 +454,7 @@ def get_examples7():
                         [1,1,1,1,1,1,1],
                         [1,0,1,0,1,0,1],
                         [1,0,1,1,1,0,1]],dtype=torch.int32)
-    examples7.append(brig)
-
-    brig =  torch.tensor([[0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0],
-                        [1,1,1,1,1,1,1],
-                        [1,0,1,0,1,0,1],
-                        [1,0,1,1,1,0,1]],dtype=torch.int32)
-    examples7.append(brig)
+    examples7.append(("brig",brig))
     return examples7
 
 def get_easy_examples7():
