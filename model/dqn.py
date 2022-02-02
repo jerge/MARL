@@ -18,7 +18,7 @@ def eps_greedy_policy(q_values, eps):
     :return: action_index
     '''
     if random.random() < eps:
-        return random.randint(0,q_values.shape[1]-1)
+        return random.randint(0,q_values.shape[-1]-1)
     return torch.argmax(q_values)
 
 def calc_q_and_take_action(dqn, state, eps):
@@ -52,7 +52,9 @@ def calculate_q_targets(q1_batch, r_batch, nonterminal_batch, gamma=.99):
     : return: Q target. FloatTensor, shape (N,)
     '''
     # target = y_i = r_i +  gamma_a{max}^q(siprime, a; offline_param), 
-
+    # print(q1_batch.shape)
+    # print(torch.max(q1_batch,dim=1)[0].shape)
+    # print(nonterminal_batch.long().shape)
     Y = r_batch + nonterminal_batch.long() * gamma * (torch.max(q1_batch,dim=1)[0])
     return Y
 
@@ -96,7 +98,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
     R_avg = []
     for i in range(num_episodes):
         state = env.reset() # Initial state
-        state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
+        #state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
         state = state[None,:] # Add singleton dimension, to represent depth 1 of image.
         finish_episode = False # Initialize
         ep_reward = 0 # Initialize "Episodic reward", i.e. the total reward for episode, when disregarding discount factor.
@@ -114,7 +116,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
-            new_state = new_state[None,:]
+            #new_state = new_state[None,:]
             new_state = new_state[None,:]
             
             # Assess whether terminal state was reached.

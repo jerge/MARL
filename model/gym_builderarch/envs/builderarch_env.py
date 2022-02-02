@@ -15,7 +15,7 @@ class BuilderArchEnv(gym.Env):
         self.size = (7,7)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
-        self.no_action_punishment = -100
+        self.no_action_punishment = 0
         self.state = None
         self.steps = 0
         self.max_steps = 100
@@ -50,7 +50,8 @@ class BuilderArchEnv(gym.Env):
         self.state = torch.zeros(self.size)
         self.loc = 0
         self.steps = 0
-        ex = random.choice(get_easy_examples7())
+        ex = random.choice(get_easy_examples7()[:7])
+        #ex = get_easy_examples7()[4]
         self.set_goal(ex)
         return self.state
 

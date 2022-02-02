@@ -71,23 +71,42 @@ class QNetwork(nn.Module):
         super().__init__()
         self._num_states = num_states
         self._num_actions = num_actions
-        keep_prob = 1
-        # (Batch, Number Channels, height, width)
-        out_channels = 3
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(1,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=1),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer3 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1] * out_channels)
-        self.layer4 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1])
-        self.layer5 = nn.Linear(num_states[0] * num_states[1], num_actions)
 
+        self.conv = False
+        if self.conv:
+            keep_prob = 1
+            # (Batch, Number Channels, height, width)
+            out_channels = 3
+            self.layer1 = nn.Sequential(
+                nn.Conv2d(1,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
+                nn.ReLU(),
+                #nn.MaxPool2d(kernel_size=2, stride=1),
+                nn.Dropout(p=1 - keep_prob))
+            self.layer2 = nn.Sequential(
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
+                nn.ReLU(),
+                #nn.MaxPool2d(kernel_size=2, stride=2),
+                nn.Dropout(p=1 - keep_prob))
+        else:
+            out_channels = 3 # Not really the best name anymore
+            self.layer1 = nn.Sequential(
+                nn.Linear(num_states[0] * num_states[1], num_states[0] * num_states[1] * 16),
+                nn.ReLU()
+            )
+            self.layer2 = nn.Sequential(
+                nn.Linear(num_states[0] * num_states[1] * 16, num_states[0] * num_states[1] * out_channels),
+                nn.ReLU()
+            )
+
+        self.layer3 = nn.Sequential(
+            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1] * out_channels),
+            nn.ReLU()
+        )
+        self.layer4 = nn.Sequential(
+            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1]),
+            nn.ReLU()
+        )
+        self.layer5 = nn.Linear(num_states[0] * num_states[1], num_actions)
         self.relu = nn.ReLU(inplace = True)
         # Initialize all bias parameters to 0, according to old Keras implementation
         #nn.init.zeros_(self._fc1.bias)
@@ -97,19 +116,22 @@ class QNetwork(nn.Module):
         #nn.init.uniform_(self._fc_final.weight, a=-1e-6, b=1e-6)
 
     def forward(self, state):
+        if not self.conv:
+            state = torch.flatten(state,start_dim=1)
         #print(state.shape)
         h = self.layer1(state)
         #print(h.shape)
         h = self.layer2(h)
         #print(h.shape)
-        h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
+        if self.conv:
+            h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
         #print(h.shape)
         h = self.layer3(h)
         #print(h.shape)
-        h = self.relu(h)
+        #h = self.relu(h)
         h = self.layer4(h)
         #print(h.shape)
-        h = self.relu(h)
+        #h = self.relu(h)
         h = self.layer5(h)
         #print(h.shape)
         q_values = h

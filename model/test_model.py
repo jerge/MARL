@@ -11,7 +11,7 @@ from dqn_model import DeepQLearningModel, ExperienceReplay
 def eps_greedy_policy(q_values, eps):
     print(q_values)
     if random.random() < eps:
-        return random.randint(0,q_values.shape[1]-1)
+        return random.randint(0,q_values.shape[-1]-1)
     return torch.argmax(q_values)
 
 def calc_q_and_take_action(dqn, state, eps):
@@ -39,12 +39,13 @@ dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
 mod = dqn.online_model.load_state_dict(torch.load("./model1.saved"))
 
 done = False
+
+ob = env.state
 while not done:
-    state = env.state
     env.render()
-    state = state[None,:]
-    state = state[None,:]
-    q_o_c, a = calc_q_and_take_action(dqn, state, 0.5)
+    ob = ob[None,:]
+    q_o_c, a = calc_q_and_take_action(dqn, ob, 0)
     ob, r, done, _ = env.step(a)
     print(f"a:{a}, r:{r}, new_loc:{env.loc}")
+    print(ob)
 env.render()
