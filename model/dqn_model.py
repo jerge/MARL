@@ -5,10 +5,11 @@ import numpy as np
 
 
 class ExperienceReplay:
-    def __init__(self, device, num_states, buffer_size=1e+6):
+    def __init__(self, device, num_states, buffer_size=1e+6, input_channels=1):
         self._device = device
         self.__buffer = deque(maxlen=int(buffer_size))
         self._num_states = num_states
+        self._input_channels = input_channels
 
     @property
     def buffer_length(self):
@@ -28,7 +29,7 @@ class ExperienceReplay:
         :return:
         '''
         ids = np.random.choice(a=self.buffer_length, size=batch_size)
-        state_batch = torch.zeros([batch_size,1, self._num_states[0], self._num_states[1]],
+        state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
                                dtype=torch.float)
         action_batch = torch.zeros([
             batch_size,
@@ -39,7 +40,7 @@ class ExperienceReplay:
         nonterminal_batch = torch.zeros([
             batch_size,
         ], dtype=torch.bool)
-        next_state_batch = torch.zeros([batch_size,1, self._num_states[0], self._num_states[1]],
+        next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
                                     dtype=torch.float)
         for i, index in zip(range(batch_size), ids):
             state_batch[i, :] = self.__buffer[index].s
@@ -73,9 +74,9 @@ class QNetwork(nn.Module):
         self._num_actions = num_actions
         keep_prob = 1
         # (Batch, Number Channels, height, width)
-        out_channels = 3
+        out_channels = 4
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
+            nn.Conv2d(2,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Dropout(p=1 - keep_prob))
@@ -84,9 +85,10 @@ class QNetwork(nn.Module):
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
-        self.layer3 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1] * out_channels)
-        self.layer4 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1])
-        self.layer5 = nn.Linear(num_states[0] * num_states[1], num_actions)
+        self.layer3 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1] * out_channels * out_channels)
+        self.layer4 = nn.Linear(num_states[0] * num_states[1] * out_channels * out_channels, num_states[0] * num_states[1] * out_channels * out_channels)
+        self.layer5 = nn.Linear(num_states[0] * num_states[1] * out_channels * out_channels, num_states[0] * num_states[1])
+        self.layer6 = nn.Linear(num_states[0] * num_states[1], num_actions)
 
         self.relu = nn.ReLU(inplace = True)
         # Initialize all bias parameters to 0, according to old Keras implementation
@@ -105,6 +107,9 @@ class QNetwork(nn.Module):
         h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
         #print(h.shape)
         h = self.layer3(h)
+        #print(h.shape)
+        h = self.relu(h)
+        h = self.layer4(h)
         #print(h.shape)
         h = self.relu(h)
         h = self.layer4(h)

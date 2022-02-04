@@ -97,7 +97,6 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
     for i in range(num_episodes):
         state = env.reset() # Initial state
         state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
-        state = state[None,:] # Add singleton dimension, to represent depth 1 of image.
         finish_episode = False # Initialize
         ep_reward = 0 # Initialize "Episodic reward", i.e. the total reward for episode, when disregarding discount factor.
         q_buffer = []
@@ -114,7 +113,6 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
-            new_state = new_state[None,:]
             new_state = new_state[None,:]
             
             # Assess whether terminal state was reached.
@@ -168,6 +166,7 @@ enable_visualization = False
 actions = env.action_space
 num_actions = actions.n
 num_states = env.size
+input_channels = 2
 
 num_episodes = 2000
 batch_size = 128
@@ -179,7 +178,7 @@ dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
 
 # Create replay buffer, where experience in form of tuples <s,a,r,s',t>, gathered from the environment is stored 
 # for training
-replay_buffer = ExperienceReplay(device, num_states)
+replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
 
 # Train
 R, R_avg = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma)

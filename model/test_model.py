@@ -42,9 +42,9 @@ done = False
 while not done:
     state = env.state
     env.render()
+    state = env.get_state()
     state = state[None,:]
-    state = state[None,:]
-    q_o_c, a = calc_q_and_take_action(dqn, state, 0.5)
+    q_o_c, a = calc_q_and_take_action(dqn, state, 0)
     ob, r, done, _ = env.step(a)
     print(f"a:{a}, r:{r}, new_loc:{env.loc}")
 env.render()

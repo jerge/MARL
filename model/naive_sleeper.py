@@ -1,4 +1,8 @@
 import pandas as pd
+import collections
+import csv
+import matplotlib.pyplot as plt
+import numpy as np
 
 def get_solution(name):
     df = pd.read_csv(f)
@@ -50,12 +54,41 @@ def findLCS(x, y, m, n):
             for i in tmp:
                 s.add(i)
     return s
-import collections
+
+def decide_abstraction(lcs,n):
+    # Currently just taking most common words
+    good_abstractions = []
+    for i in range(2,8):
+        ws = [word for word, count in lcs.most_common() if len(word) == i]
+        cs = [count for word, count in lcs.most_common() if len(word) == i]
+        good_abstractions.append(ws[np.argmax(cs)])
+    print(good_abstractions)
+    #filtered_dict = {word: count for word, count in lcs.most_common() if len(word) >= min_threshold}
+    return good_abstractions#list(filtered_dict.keys())[:n]
+
+def create_catalog(words):
+    with open('catalog.csv', 'a') as f:
+        writer = csv.writer(f)
+        for word in words:
+            writer.writerow(word)
+
+#[(w,1)]
+def graph_count(lcs):
+    #word
+    counts = [count for (word,count) in lcs.most_common()]
+    lengths = [len(word) for (word,count) in lcs.most_common()]
+    plt.scatter(lengths, counts)
+    z = np.polyfit(lengths, counts, 2)
+    p = np.poly1d(z)
+    plt.plot(range(0,10),p(range(0,10)),"r--")
+    plt.show()
+
+
 df = pd.read_csv('bruteforce.csv')
 
 sols = [str(sol).strip().replace(",", "").replace(" ", "").replace("(", "").replace(")", "") for sol in df['actions'] if sol != "()"]
 # Maximum string length
-N = 90
+N = 100
 L = [[0 for i in range(N)]
         for j in range(N)]
 lcs = collections.Counter()
@@ -63,4 +96,6 @@ for i in range(len(sols)):
     for j in range(i, len(sols)):
         for x in findLCS(sols[i], sols[j], len(sols[i]), len(sols[j])):
             lcs[x] += 1
-print(lcs)
+
+words = decide_abstraction(lcs,3)
+create_catalog(words)
