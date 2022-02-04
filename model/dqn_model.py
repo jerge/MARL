@@ -112,10 +112,10 @@ class QNetwork(nn.Module):
         h = self.layer4(h)
         #print(h.shape)
         h = self.relu(h)
-        h = self.layer4(h)
+        h = self.layer5(h)
         #print(h.shape)
         h = self.relu(h)
-        h = self.layer5(h)
+        h = self.layer6(h)
         #print(h.shape)
         q_values = h
         return q_values

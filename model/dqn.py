@@ -168,7 +168,7 @@ num_actions = actions.n
 num_states = env.size
 input_channels = 2
 
-num_episodes = 2000
+num_episodes = 4000
 batch_size = 128
 gamma = .94
 learning_rate = 1e-4

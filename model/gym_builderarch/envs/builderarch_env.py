@@ -51,7 +51,7 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(get_easy_examples7()[1])
+        ex = random.choice(get_easy_examples7())[1]
         #ex = get_easy_examples7()[4][1]
         self.set_goal(ex)
         return self.get_state()
