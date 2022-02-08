@@ -51,7 +51,7 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(get_easy_examples7())[1] #[:4]
+        ex = random.choice(get_easy_examples7()[:4])[1] #
         #ex = get_easy_examples7()[4][1]
         self.set_goal(ex)
         return self.get_state()
@@ -112,7 +112,7 @@ class BuilderArchEnv(gym.Env):
         if self.goal is None:
             return 0
         diff_state = (self.state - prev_state)
-        return torch.sum(self.goal * (diff_state) * 2 - diff_state * 1.3)
+        return torch.sum(self.goal * (diff_state) * 2 - diff_state)
     
     def get_all_examples(self):
         return get_examples7()

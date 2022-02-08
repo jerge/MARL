@@ -137,7 +137,9 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
                 if cnt_updates % tau == 0:
                     dqn.update_target_network()
                 
-        eps = max(eps * eps_decay, eps_end) # decrease epsilon        
+        eps = max(eps * eps_decay, eps_end) # decrease epsilon
+        if eps < 0.25:
+            eps_decay = 0.9999      
         R_buffer.append(ep_reward)
         
         # Running average of episodic rewards (total reward, disregarding discount factor)
@@ -148,8 +150,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         d = eps
         #print(type(np.array(q_buffer)))
         e = np.mean([torch.mean(q).detach().numpy() for q in q_buffer])
-        print(f'Episode: {a}, Total Reward (running avg): {b} ({c}) Epsilon: {d}, Avg Q: {e}')
-        
+        print('Episode: {:d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,b,c,d,e))        
         # If running average > 195 (close to 200), the task is considered solved
         if R_avg[-1] > 195:
             return R_buffer, R_avg
