@@ -38,16 +38,16 @@ eps = 0
 num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-mod = dqn.online_model.load_state_dict(torch.load("./model1.saved"))
+#mod = dqn.online_model.load_state_dict(torch.load("./model2.saved"))
 
 steps = 0
 done = False
 while not done:
     print("\n")
-    state = env.state
     env.render()
     state = env.get_state()
     state = state[None,:]
+    #print(state)
     q_o_c, a = calc_q_and_take_action(dqn, state, eps)
     ob, r, done, _ = env.step(a)
     steps += 1

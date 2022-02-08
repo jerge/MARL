@@ -88,8 +88,8 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
 def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=False, batch_size=64, gamma=.94):        
     Transition = namedtuple("Transition", ["s", "a", "r", "next_s", "t"])
     eps = 1.
-    eps_end = .1 
-    eps_decay = .001
+    eps_end = .03
+    eps_decay = .999
     tau = 1000
     cnt_updates = 0
     R_buffer = []
@@ -119,7 +119,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             # The episode may end due to having reached 50 steps, 
             # but we should not regard this as reaching the terminal state, 
             # and hence not disregard Q(s',a) from the Q target.
-            nonterminal_to_buffer = not finish_episode or steps == 50
+            nonterminal_to_buffer = not finish_episode or steps == 99
             
             # Store experienced transition to replay buffer
             replay_buffer.add(Transition(s=state, a=curr_action, r=reward, next_s=new_state, t=nonterminal_to_buffer))
@@ -127,7 +127,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             state = new_state
             ep_reward += reward
             # If replay buffer contains more than ? samples, perform one training step
-            if replay_buffer.buffer_length > 10:
+            if replay_buffer.buffer_length > batch_size:
                 loss = sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma)
                 dqn.optimizer.zero_grad()
                 loss.backward()
@@ -137,7 +137,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
                 if cnt_updates % tau == 0:
                     dqn.update_target_network()
                 
-        eps = max(eps - eps_decay, eps_end) # decrease epsilon        
+        eps = max(eps * eps_decay, eps_end) # decrease epsilon        
         R_buffer.append(ep_reward)
         
         # Running average of episodic rewards (total reward, disregarding discount factor)
@@ -148,7 +148,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         d = eps
         #print(type(np.array(q_buffer)))
         e = np.mean([torch.mean(q).detach().numpy() for q in q_buffer])
-        print('Episode: {:d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,b,c,d,e))
+        print(f'Episode: {a}, Total Reward (running avg): {b} ({c}) Epsilon: {d}, Avg Q: {e}')
         
         # If running average > 195 (close to 200), the task is considered solved
         if R_avg[-1] > 195:
@@ -172,12 +172,13 @@ input_channels = 2
 
 num_episodes = 3000
 batch_size = 128
-gamma = .94
+gamma = .90
 learning_rate = 1e-4
 
 # Object holding our online / offline Q-Networks
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-
+dqn.online_model.load_state_dict(torch.load("./model1.saved"))
+dqn.offline_model.load_state_dict(torch.load("./model1.saved"))
 # Create replay buffer, where experience in form of tuples <s,a,r,s',t>, gathered from the environment is stored 
 # for training
 replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
@@ -185,4 +186,4 @@ replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channe
 # Train
 R, R_avg = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma)
 
-torch.save(dqn.online_model.state_dict(), "./model1.saved")
+torch.save(dqn.online_model.state_dict(), "./model2.saved")
