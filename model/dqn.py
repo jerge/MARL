@@ -103,7 +103,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         steps = 0
         while not finish_episode:
             if enable_visualization:
-                env.render() # comment this line out if you don't want to / cannot render the environment on your system
+                env.render()
             steps += 1
 
             # Take one step in environment. No need to compute gradients,
@@ -116,7 +116,9 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             new_state = new_state[None,:]
             
             # Assess whether terminal state was reached.
-            # The episode may end due to having reached 200 steps, but we should not regard this as reaching the terminal state, and hence not disregard Q(s',a) from the Q target.
+            # The episode may end due to having reached 50 steps, 
+            # but we should not regard this as reaching the terminal state, 
+            # and hence not disregard Q(s',a) from the Q target.
             nonterminal_to_buffer = not finish_episode or steps == 50
             
             # Store experienced transition to replay buffer
@@ -168,7 +170,7 @@ num_actions = actions.n
 num_states = env.size
 input_channels = 2
 
-num_episodes = 4
+num_episodes = 3000
 batch_size = 128
 gamma = .94
 learning_rate = 1e-4

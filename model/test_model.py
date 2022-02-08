@@ -9,7 +9,6 @@ from collections import namedtuple
 from dqn_model import DeepQLearningModel, ExperienceReplay
 
 def eps_greedy_policy(q_values, eps):
-    print(q_values)
     if random.random() < eps:
         return random.randint(0,q_values.shape[1]-1)
     return torch.argmax(q_values)
@@ -24,27 +23,39 @@ def calc_q_and_take_action(dqn, state, eps):
 
 env = gym.make('BuilderArch-v1')
 env.reset()
-print(env.goal)
+print("------GOAL------")
+env.render_state(env.goal)
+print("----------------")
 device = torch.device("cpu")
 actions = env.action_space
 num_actions = actions.n
+action_list = ['Vert','Hori','Left','Right']
+
 num_states = env.size
 
-num_episodes = 3000
-batch_size = 128
-gamma = .94
-learning_rate = 1e-4
+eps = 0
+
+num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
 mod = dqn.online_model.load_state_dict(torch.load("./model1.saved"))
 
+steps = 0
 done = False
 while not done:
+    print("\n")
     state = env.state
     env.render()
     state = env.get_state()
     state = state[None,:]
-    q_o_c, a = calc_q_and_take_action(dqn, state, 0)
+    q_o_c, a = calc_q_and_take_action(dqn, state, eps)
     ob, r, done, _ = env.step(a)
-    print(f"a:{a}, r:{r}, new_loc:{env.loc}")
+    steps += 1
+    print(list(zip(action_list,[round(x,3) for x in q_o_c.tolist()[0]])))
+    print(f"Action: {action_list[a]}, Reward: {r}, New loc: {env.loc}")
+print(f"\n-----RESULT----- in {steps} steps with {eps*100}% randomness")
 env.render()
+print("----------------")
+print("------GOAL------")
+env.render_state(env.goal)
+print("----------------")

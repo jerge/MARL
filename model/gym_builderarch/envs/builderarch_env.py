@@ -57,14 +57,22 @@ class BuilderArchEnv(gym.Env):
         return self.get_state()
 
     def render(self, mode='human'):
-        print(self.state.long())
+        print(" "*(3*self.loc+1) + "\N{WHITE DOWN POINTING BACKHAND INDEX}")
+        for row in self.state.long().tolist():
+            print(str(row).replace('0',"."))
+        return False
+    
+    def render_state(self, state):
+        print(" "*(3*self.loc+1) + "\N{WHITE DOWN POINTING BACKHAND INDEX}")
+        for row in state.long().tolist():
+            print(str(row).replace('0',"."))
         return False
 
     def get_state(self):
         ob = torch.stack((torch.roll(self.goal,self.loc,1), torch.roll(self.state,self.loc,1)))
         return ob
     
-    # Returns wether the action was allowed and mutates the state if it was allowed
+    # Returns true if the action was allowed and mutates the state if it was allowed
     def take_action(self, action):
         action = int(action)
         assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
