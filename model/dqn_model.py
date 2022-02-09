@@ -74,20 +74,31 @@ class QNetwork(nn.Module):
         self._num_actions = num_actions
         keep_prob = 1
         # (Batch, Number Channels, height, width)
-        out_channels = 4
+        out_channels = 2
         self.layer1 = nn.Sequential(
             nn.Conv2d(2,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Dropout(p=1 - keep_prob))
         self.layer2 = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, kernel_size=(2,1), stride=1, padding=1, padding_mode='circular'),
+            nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout(p=1 - keep_prob))
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, kernel_size=(1,2), stride=1, padding=1, padding_mode='circular'),
+            nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout(p=1 - keep_prob))
+        self.layer4 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
             nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
-        self.layer3 = nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1] * out_channels * out_channels)
-        self.layer4 = nn.Linear(num_states[0] * num_states[1] * out_channels * out_channels, num_states[0] * num_states[1] * out_channels * out_channels)
-        self.layer5 = nn.Linear(num_states[0] * num_states[1] * out_channels * out_channels, num_states[0] * num_states[1])
+        self.layer5 = nn.Sequential(
+            nn.Linear(num_states[0] * num_states[1] * out_channels * out_channels + 4, num_states[0] * num_states[1]),
+            nn.ReLU()
+        )
         self.layer6 = nn.Linear(num_states[0] * num_states[1], num_actions)
 
         self.relu = nn.ReLU(inplace = True)
@@ -104,17 +115,14 @@ class QNetwork(nn.Module):
         #print(h.shape)
         h = self.layer2(h)
         #print(h.shape)
-        h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
-        #print(h.shape)
         h = self.layer3(h)
         #print(h.shape)
-        h = self.relu(h)
         h = self.layer4(h)
         #print(h.shape)
-        h = self.relu(h)
+        h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
+        #print(h.shape)
         h = self.layer5(h)
         #print(h.shape)
-        h = self.relu(h)
         h = self.layer6(h)
         #print(h.shape)
         q_values = h

@@ -112,7 +112,10 @@ class BuilderArchEnv(gym.Env):
         if self.goal is None:
             return 0
         diff_state = (self.state - prev_state)
-        return torch.sum(self.goal * (diff_state) * 2 - diff_state)
+        goal_diff = self.goal * (diff_state)
+        if torch.sum(goal_diff) == 1:
+            return torch.tensor(0.5)
+        return torch.sum(goal_diff * 2 - diff_state)
     
     def get_all_examples(self):
         return get_examples7()

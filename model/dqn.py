@@ -8,7 +8,10 @@ import random
 #import examples as ex
 import numpy as np
 
-device = torch.device("cpu")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 def eps_greedy_policy(q_values, eps):
     '''
@@ -171,15 +174,15 @@ num_actions = actions.n
 num_states = env.size
 input_channels = 2
 
-num_episodes = 3000
+num_episodes = 100
 batch_size = 128
 gamma = .90
 learning_rate = 1e-4
 
 # Object holding our online / offline Q-Networks
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-dqn.online_model.load_state_dict(torch.load("./model1.saved"))
-dqn.offline_model.load_state_dict(torch.load("./model1.saved"))
+#dqn.online_model.load_state_dict(torch.load("./model1.saved"))
+#dqn.offline_model.load_state_dict(torch.load("./model1.saved"))
 # Create replay buffer, where experience in form of tuples <s,a,r,s',t>, gathered from the environment is stored 
 # for training
 replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
@@ -187,4 +190,4 @@ replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channe
 # Train
 R, R_avg = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma)
 
-torch.save(dqn.online_model.state_dict(), "./model2.saved")
+torch.save(dqn.online_model.state_dict(), "./model3.saved")
