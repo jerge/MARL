@@ -15,7 +15,7 @@ class BuilderArchEnv(gym.Env):
         self.size = (7,7)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
-        self.invalid_action_punishment = -10
+        self.invalid_action_punishment = -0
         self.state = None
         self.steps = 0
         self.max_steps = 100
@@ -38,9 +38,9 @@ class BuilderArchEnv(gym.Env):
 
         allowed = self.take_action(action)
 
-        reward = self.get_reward(prev_state,prev_loc) if allowed else self.invalid_action_punishment
-        #print(reward)
         done = self.is_done()
+        reward = self.get_reward(prev_state,done) if allowed else self.invalid_action_punishment
+        #print(reward)
         ob = self.get_state()
         return ob, reward, done, {}
 
@@ -51,7 +51,7 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(get_easy_examples7()[:4])[1] #
+        ex = random.choice(get_super_easy()[:2])[1] #
         #ex = get_easy_examples7()[4][1]
         self.set_goal(ex)
         return self.get_state()
@@ -107,20 +107,81 @@ class BuilderArchEnv(gym.Env):
             self.state = self.state
         return True
 
-    def get_reward(self, prev_state, prev_loc):
-        """ Reward is given for XY. """
+    def get_reward(self, prev_state, done):
         if self.goal is None:
-            return 0
-        diff_state = (self.state - prev_state)
-        goal_diff = self.goal * (diff_state)
-        if torch.sum(goal_diff) == 1:
-            return torch.tensor(0.5)
-        return torch.sum(goal_diff * 2 - diff_state)
+            return torch.tensor(0.)
+        if done:
+            if torch.equal(self.goal, self.state.int()):
+                return torch.tensor(1.)
+            else:
+                #print(torch.sum(torch.tensor(self.goal*self.state.int()))/(torch.sum(self.goal))-1)
+                a = torch.sum(torch.tensor(self.goal.float()*self.state))
+                #print(a)
+                b = torch.sum(self.goal.float())
+                #print(b)
+                #print(a/b)
+                #print(a/b)
+                return a/b -1#(torch.sum(torch.tensor(self.goal.float()*self.state))/(torch.sum(self.goal))).long()-1
+        return torch.tensor(0.)
+        #torch.sum(self.goal * self.state) / torch.sum(self.goal)
+        # diff_state = (self.state - prev_state)
+        # goal_diff = self.goal * (diff_state)
+        # if torch.sum(goal_diff) == 1:
+        #     return torch.tensor(0.5)
+        # return torch.sum(goal_diff * 2 - diff_state)
     
     def get_all_examples(self):
         return get_examples7()
 
 # TODO: PLEASE FIX
+def get_super_easy():
+    examples7 = []
+    h1 =  torch.tensor([[0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,1,1,0,0,0,0]],dtype=torch.int32)
+    examples7.append(("h1",h1))
+
+    h2 =  torch.tensor([[0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,1,1,1,1,0]],dtype=torch.int32)
+    examples7.append(("h2",h2))
+
+    v1 =  torch.tensor([[0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [1,0,0,0,0,0,0],
+                        [1,0,0,0,0,0,0]],dtype=torch.int32)
+    examples7.append(("v1",v1))
+    v2 =  torch.tensor([[0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,1,0,1,0,0,0],
+                        [0,1,0,1,0,0,0]],dtype=torch.int32)
+    examples7.append(("v2",v2))
+
+    q =  torch.tensor([[0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0],
+                        [1,1,0,0,0,0,0],
+                        [1,1,0,0,0,0,0]],dtype=torch.int32)
+    examples7.append(("q",q))
+    return examples7
+
+
 def get_examples7():
     examples7 = []
     size = (7,7)
