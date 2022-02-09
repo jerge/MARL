@@ -114,7 +114,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             # Take one step in environment. No need to compute gradients,
             # we will just store transition to replay buffer, and later sample a whole batch
             # from the replay buffer to actually take a gradient step.
-            q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps)
+            q_online_curr, curr_action = calc_q_and_take_action(dqn, state.to(device=device), eps)
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
