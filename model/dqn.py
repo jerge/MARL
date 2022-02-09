@@ -41,7 +41,7 @@ def calc_q_and_take_action(dqn, state, eps):
     #   which take the state as input, and output the Q-values for all actions.
     # Input shape (batch_size, num_states). Output shape (batch_size, num_actions).
     #state = torch.from_numpy(state)
-    q_online_curr = dqn.online_model(state)
+    q_online_curr = dqn.online_model(state.to(device=device)).cpu()
     #q_o_c = q_online_curr.cpu().detach().numpy().reshape((-1,))
     action_i = eps_greedy_policy(q_online_curr, eps) # 
     #curr_action = np.random.choice([0,1],size=1,p=actions)[0]
@@ -81,9 +81,9 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
     # Input shape (batch_size, num_states). Output shape (batch_size, num_actions).
 
     # YOUR CODE HERE
-    q_online_curr = dqn.online_model(curr_state)
+    q_online_curr = dqn.online_model(curr_state.to(device=device)).cpu()
     with torch.no_grad():
-        q_offline_next = dqn.offline_model(next_state)
+        q_offline_next = dqn.offline_model(next_state.to(device=device)).cpu()
     
     q_target = calculate_q_targets(q_offline_next, reward, nonterminal, gamma=gamma)
     loss = dqn.calc_loss(q_online_curr, q_target, curr_action)
@@ -114,7 +114,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             # Take one step in environment. No need to compute gradients,
             # we will just store transition to replay buffer, and later sample a whole batch
             # from the replay buffer to actually take a gradient step.
-            q_online_curr, curr_action = calc_q_and_take_action(dqn, state.to(device=device), eps)
+            q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps)
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
@@ -154,7 +154,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         c = R_avg[-1]
         d = eps
         #print(type(np.array(q_buffer)))
-        e = np.mean([torch.mean(q).detach().numpy() for q in q_buffer])
+        e = np.mean([torch.mean(q).cpu().detach().numpy() for q in q_buffer])
         print('Episode: {:d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,b,c,d,e))        
         # If running average > 195 (close to 200), the task is considered solved
         if R_avg[-1] > 195:
@@ -176,7 +176,7 @@ num_actions = actions.n
 num_states = env.size
 input_channels = 2
 
-num_episodes = 100
+num_episodes = 5000
 batch_size = 128
 gamma = .90
 learning_rate = 1e-4
