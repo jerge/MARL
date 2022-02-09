@@ -156,8 +156,8 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         #print(type(np.array(q_buffer)))
         e = np.mean([torch.mean(q).cpu().detach().numpy() for q in q_buffer])
         print('Episode: {:d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,b,c,d,e))        
-        # If running average > 195 (close to 200), the task is considered solved
-        if R_avg[-1] > 195:
+        # If running average > 0.95 (close to 1), the task is considered solved
+        if R_avg[-1] > 0.95:
             return R_buffer, R_avg
     return R_buffer, R_avg
 
