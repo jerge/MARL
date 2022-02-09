@@ -51,7 +51,7 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(get_super_easy()[:2])[1] #
+        ex = random.choice(get_super_easy())[1] #
         #ex = get_easy_examples7()[4][1]
         self.set_goal(ex)
         return self.get_state()
@@ -113,15 +113,15 @@ class BuilderArchEnv(gym.Env):
         if done:
             if torch.equal(self.goal, self.state.int()):
                 return torch.tensor(1.)
-            else:
-                #print(torch.sum(torch.tensor(self.goal*self.state.int()))/(torch.sum(self.goal))-1)
-                a = torch.sum(torch.tensor(self.goal.float()*self.state))
-                #print(a)
-                b = torch.sum(self.goal.float())
-                #print(b)
-                #print(a/b)
-                #print(a/b)
-                return a/b -1#(torch.sum(torch.tensor(self.goal.float()*self.state))/(torch.sum(self.goal))).long()-1
+            # else:
+            #     #print(torch.sum(torch.tensor(self.goal*self.state.int()))/(torch.sum(self.goal))-1)
+            #     a = torch.sum(torch.tensor(self.goal.float()*self.state))
+            #     #print(a)
+            #     b = torch.sum(self.goal.float())
+            #     #print(b)
+            #     #print(a/b)
+            #     #print(a/b)
+            #     return a/b -1#(torch.sum(torch.tensor(self.goal.float()*self.state))/(torch.sum(self.goal))).long()-1
         return torch.tensor(0.)
         #torch.sum(self.goal * self.state) / torch.sum(self.goal)
         # diff_state = (self.state - prev_state)
