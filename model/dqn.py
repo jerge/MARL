@@ -9,8 +9,10 @@ import random
 import numpy as np
 
 if torch.cuda.is_available():
+    print('cuda')
     device = torch.device("cuda")
 else:
+    print('cpu')
     device = torch.device("cpu")
 
 def eps_greedy_policy(q_values, eps):
