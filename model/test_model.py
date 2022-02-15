@@ -19,10 +19,29 @@ def calc_q_and_take_action(dqn, state, eps):
 
     return q_online_curr, torch.tensor(action_i)
 
+def test_examples(n_examples, dqn, env, difficulty="normal"):
+    eps = 0
+    for i in range(n_examples):
+        env.reset()
+        env.set_goal(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1])
 
+        done = False
+        while not done:
+            state = env.get_state()
+            state = state[None,:]
+
+            q_o_c, a = calc_q_and_take_action(dqn, state, eps)
+            ob, r, done, _ = env.step(a)
+        if not r >= 0.9:
+            print(f"Could not solve examples {i}")
+            return False
+    print(f"Solved all {n_examples} examples")
+    return True
 
 env = gym.make('BuilderArch-v1')
-env.reset()
+n = 2
+env.reset(n=n)
+
 print("------GOAL------")
 env.render_state(env.goal)
 print("----------------")
@@ -38,7 +57,7 @@ eps = 0
 num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-mod = dqn.online_model.load_state_dict(torch.load("./model3.saved"))
+mod = dqn.online_model.load_state_dict(torch.load(f"./{env.size[0]}normal{n}_interrupted.saved"))
 
 steps = 0
 done = False
@@ -59,3 +78,5 @@ print("----------------")
 print("------GOAL------")
 env.render_state(env.goal)
 print("----------------")
+
+test_examples(4,dqn,env)

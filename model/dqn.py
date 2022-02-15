@@ -7,6 +7,7 @@ from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
 #import examples as ex
 import numpy as np
+import os
 
 if torch.cuda.is_available():
     print('cuda')
@@ -14,6 +15,28 @@ if torch.cuda.is_available():
 else:
     print('cpu')
     device = torch.device("cpu")
+
+
+# Tests if the current dqn can solve all n_examples with epsilon 0
+def test_examples(n_examples, dqn, env, difficulty="normal"):
+    eps = 0
+    for i in range(n_examples):
+        env.reset()
+        env.set_goal(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1])
+
+        done = False
+        while not done:
+            state = env.get_state()
+            state = state[None,:]
+
+            q_o_c, a = calc_q_and_take_action(dqn, state, eps)
+            ob, r, done, _ = env.step(a)
+        if not r >= 0.9:
+            print(f"Could not solve examples {i}")
+            return False
+    print(f"Solved all {n_examples} examples")
+    return True
+
 
 def eps_greedy_policy(q_values, eps):
     '''
@@ -90,17 +113,21 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
 
     return loss
 
-def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=False, batch_size=64, gamma=.94):        
+# R_buf, R_avg, timedout?
+def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=False, batch_size=64, gamma=.94, n_examples=0, lim = 19):        
     Transition = namedtuple("Transition", ["s", "a", "r", "next_s", "t"])
-    eps = 1.
+    eps = 0.99
     eps_end = .03
     eps_decay = .999
-    tau = 1000
+    tau = 500
     cnt_updates = 0
     R_buffer = []
     R_avg = []
     for i in range(num_episodes):
-        state = env.reset() # Initial state
+        if random.random() < 0.1:
+            prev_eps = eps
+            eps = 1.
+        state = env.reset(n=n_examples) # Initial state
         state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
         finish_episode = False # Initialize
         ep_reward = 0 # Initialize "Episodic reward", i.e. the total reward for episode, when disregarding discount factor.
@@ -118,12 +145,10 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
+            #print(new_state)
+            #print("\n")
             new_state = new_state[None,:]
             
-            # Assess whether terminal state was reached.
-            # The episode may end due to having reached 50 steps, 
-            # but we should not regard this as reaching the terminal state, 
-            # and hence not disregard Q(s',a) from the Q target.
             nonterminal_to_buffer = not finish_episode or steps == 99
             
             # Store experienced transition to replay buffer
@@ -140,11 +165,14 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
 
                 cnt_updates += 1
                 if cnt_updates % tau == 0:
+                    print(f"Update target network, using {n_examples} examples")
                     dqn.update_target_network()
                 
+        if eps == 1:
+            eps = prev_eps
         eps = max(eps * eps_decay, eps_end) # decrease epsilon
-        if eps < 0.25:
-            eps_decay = 0.9999      
+        # if eps < 0.20:
+        #     eps_decay = 0.9999      
         R_buffer.append(ep_reward)
         
         # Running average of episodic rewards (total reward, disregarding discount factor)
@@ -155,11 +183,15 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         d = eps
         #print(type(np.array(q_buffer)))
         e = np.mean([torch.mean(q).cpu().detach().numpy() for q in q_buffer])
-        print('Episode: {:d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,b,c,d,e))        
+        print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,n_examples, b,c,d,e))
         # If running average > 0.95 (close to 1), the task is considered solved
-        if R_avg[-1] > 0.95:
-            return R_buffer, R_avg
-    return R_buffer, R_avg
+        if R_avg[-1] > lim/(lim+1):
+            if test_examples(n_examples, dqn, env):
+                return R_buffer, R_avg, False
+            lim +=1
+            #return R_buffer, R_avg
+    return R_buffer, R_avg, True
+
 
 # Create the environment
 env = gym.make('BuilderArch-v1')
@@ -176,20 +208,37 @@ num_actions = actions.n
 num_states = env.size
 input_channels = 2
 
-num_episodes = 5000
+num_episodes = 3000000
 batch_size = 128
-gamma = .90
+gamma = .95
 learning_rate = 1e-4
 
-# Object holding our online / offline Q-Networks
+ex_start = 1 # Amount of examples deemed correct
+ex_end = min(20, len(env.get_examples(filename=f"normal{env.size[0]}.squares")))
+
+name=f"{env.size[0]}normal"
+
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-#dqn.online_model.load_state_dict(torch.load("./model1.saved"))
-#dqn.offline_model.load_state_dict(torch.load("./model1.saved"))
-# Create replay buffer, where experience in form of tuples <s,a,r,s',t>, gathered from the environment is stored 
-# for training
+
+# dqn.online_model.load_state_dict(torch.load(f"./{name}{ex_start}_interrupted.saved"))
+# dqn.offline_model.load_state_dict(torch.load(f"./{name}{ex_start}_interrupted.saved"))
+if not os.path.isfile(f'./{name}{ex_start}.saved'):
+    torch.save(dqn.online_model.state_dict(),  f"./{name}{ex_start}.saved")
+    torch.save(dqn.offline_model.state_dict(), f"./{name}{ex_start}.saved")
+
 replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
-
-# Train
-R, R_avg = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma)
-
-torch.save(dqn.online_model.state_dict(), "./model3.saved")
+for i in range(ex_start, ex_end):
+    # Object holding our online / offline Q-Networks
+    dqn.online_model.load_state_dict(torch.load(f"./{name}{i}.saved"))
+    dqn.offline_model.load_state_dict(torch.load(f"./{name}{i}.saved"))
+    # Train
+    try:
+        R, R_avg, timed_out = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma, n_examples=i+1)
+        if timed_out:
+            torch.save(dqn.online_model.state_dict(), f"./{name}{i+1}_unsuc.saved")
+        else:
+            torch.save(dqn.online_model.state_dict(), f"./{name}{i+1}.saved")
+    except KeyboardInterrupt:
+        torch.save(dqn.online_model.state_dict(), f"./{name}{i}_interrupted.saved")
+        break
+    

@@ -76,30 +76,30 @@ class QNetwork(nn.Module):
         # (Batch, Number Channels, height, width)
         out_channels = 2
         self.layer1 = nn.Sequential(
-            nn.Conv2d(2,out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'), #num_states[0], num_states[1]
-            nn.ReLU(),
+            # nn.Conv2d(2,out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'), #num_states[0], num_states[1]
+            # nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Dropout(p=1 - keep_prob))
         self.layer2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
+            # nn.ReLU(),
+            # nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
         self.layer3 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=2),
+            # nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
+            # nn.ReLU(),
+            # nn.MaxPool2d(kernel_size=2, out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
             nn.Dropout(p=1 - keep_prob))
         self.layer4 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
+            # nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
+            # nn.ReLU(),
             #nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
         self.layer5 = nn.Sequential(
-            nn.Linear(98, num_states[0] * num_states[1]),
+            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1]*100),
             nn.ReLU()
         )
-        self.layer6 = nn.Linear(num_states[0] * num_states[1], num_actions)
+        self.layer6 = nn.Linear(num_states[0] * num_states[1]*100, num_actions)
 
         self.relu = nn.ReLU(inplace = True)
         # Initialize all bias parameters to 0, according to old Keras implementation

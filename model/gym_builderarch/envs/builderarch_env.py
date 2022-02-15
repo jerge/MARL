@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (3,3)
+        self.size = (7,7)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
         self.invalid_action_punishment = torch.tensor(0)
@@ -38,7 +38,6 @@ class BuilderArchEnv(gym.Env):
     
     def step(self, action):
         self.steps += 1
-        prev_loc = self.loc
         #prev_state = copy.deepcopy(self.state)
         allowed = self.take_action(action)
 
@@ -73,7 +72,8 @@ class BuilderArchEnv(gym.Env):
         return False
 
     def get_state(self):
-        ob = torch.stack((torch.roll(self.goal,self.loc,1), torch.roll(self.state,self.loc,1)))
+        ob = torch.stack((torch.roll(self.goal,-self.loc,1), torch.roll(self.state,-self.loc,1)))
+        #print(ob)
         #ob = self.goal*(-1)+self.state*2
         #ob = torch.nan_to_num(ob / ob)
         #print(ob)
@@ -106,10 +106,10 @@ class BuilderArchEnv(gym.Env):
             self.state[top-1, (loc+1) % self.size[1]] = 1
         elif action == 2: # l
             self.loc = (self.loc - 1) % self.size[1]
-            self.state = self.state
+            #self.state = self.state
         elif action == 3: # r
             self.loc = (1 + self.loc) % self.size[1]
-            self.state = self.state
+            #self.state = self.state
         return True
 
     def get_reward(self, done):
