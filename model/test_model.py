@@ -39,7 +39,7 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
     return True
 
 env = gym.make('BuilderArch-v1')
-n = 2
+n = 16
 env.reset(n=n)
 
 print("------GOAL------")
@@ -57,7 +57,7 @@ eps = 0
 num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-mod = dqn.online_model.load_state_dict(torch.load(f"./{env.size[0]}normal{n}_interrupted.saved"))
+mod = dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}normal{n}.saved"))
 
 steps = 0
 done = False
@@ -79,4 +79,4 @@ print("------GOAL------")
 env.render_state(env.goal)
 print("----------------")
 
-test_examples(4,dqn,env)
+test_examples(n,dqn,env)

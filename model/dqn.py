@@ -220,25 +220,25 @@ name=f"{env.size[0]}normal"
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
 
-# dqn.online_model.load_state_dict(torch.load(f"./{name}{ex_start}_interrupted.saved"))
-# dqn.offline_model.load_state_dict(torch.load(f"./{name}{ex_start}_interrupted.saved"))
-if not os.path.isfile(f'./{name}{ex_start}.saved'):
-    torch.save(dqn.online_model.state_dict(),  f"./{name}{ex_start}.saved")
-    torch.save(dqn.offline_model.state_dict(), f"./{name}{ex_start}.saved")
+# dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{ex_start}_interrupted.saved"))
+# dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{ex_start}_interrupted.saved"))
+if not os.path.isfile(f'./model_checkpoints/{name}{ex_start}.saved'):
+    torch.save(dqn.online_model.state_dict(),  f"./model_checkpoints/{name}{ex_start}.saved")
+    torch.save(dqn.offline_model.state_dict(), f"./model_checkpoints/{name}{ex_start}.saved")
 
 replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
 for i in range(ex_start, ex_end):
     # Object holding our online / offline Q-Networks
-    dqn.online_model.load_state_dict(torch.load(f"./{name}{i}.saved"))
-    dqn.offline_model.load_state_dict(torch.load(f"./{name}{i}.saved"))
+    dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{i}.saved"))
+    dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{i}.saved"))
     # Train
     try:
         R, R_avg, timed_out = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma, n_examples=i+1)
         if timed_out:
-            torch.save(dqn.online_model.state_dict(), f"./{name}{i+1}_unsuc.saved")
+            torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i+1}_unsuc.saved")
         else:
-            torch.save(dqn.online_model.state_dict(), f"./{name}{i+1}.saved")
+            torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i+1}.saved")
     except KeyboardInterrupt:
-        torch.save(dqn.online_model.state_dict(), f"./{name}{i}_interrupted.saved")
+        torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i}_interrupted.saved")
         break
     
