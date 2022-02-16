@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (3,3)
+        self.size = (7,7)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
         self.invalid_action_punishment = torch.tensor(0)
@@ -54,8 +54,7 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(self.get_examples(filename=f"normal{self.size[0]}.squares")[:n])[1] #
-        #ex = self.get_examples(filename=f"normal{self.size[0]}.squares")[:n][1]
+        ex = random.choice(self.get_examples(filename=f"generated{self.size[0]}.squares")[:n])[1]
         self.set_goal(ex)
         return self.get_state()
 
@@ -73,10 +72,6 @@ class BuilderArchEnv(gym.Env):
 
     def get_state(self):
         ob = torch.stack((torch.roll(self.goal,-self.loc,1), torch.roll(self.state,-self.loc,1)))
-        #print(ob)
-        #ob = self.goal*(-1)+self.state*2
-        #ob = torch.nan_to_num(ob / ob)
-        #print(ob)
         return ob
     
     # Returns true if the action was allowed and mutates the state if it was allowed
@@ -99,10 +94,10 @@ class BuilderArchEnv(gym.Env):
         elif action == 1: # h
             loc = self.loc
             top = min(top_locations[loc],top_locations[(loc+1) % self.size[1]])
-
             if not (top > 0):
                 return False
             self.state[top-1, loc] = 1
+            #print(self.state)
             self.state[top-1, (loc+1) % self.size[1]] = 1
         elif action == 2: # l
             self.loc = (self.loc - 1) % self.size[1]
@@ -123,7 +118,7 @@ class BuilderArchEnv(gym.Env):
         #     return torch.tensor(-1.)
         return torch.tensor(0.)
     
-    def get_examples(self, filename=f"normal7.squares"):
+    def get_examples(self, filename=f"generated7.squares"):
         import os
         read_file = open(os.path.join(os.path.dirname(__file__), filename),"r").read()
         import re
@@ -136,18 +131,5 @@ class BuilderArchEnv(gym.Env):
             examples.append((name, matrix))
         return examples
 
-    # NOTE: Also resets state to zeros
-    def get_random_example(self,length):
-        actions = list(range(self.action_space.n))
-        action_combination = random.choice(itertools.product(actions,repeat=length))
-        self.state = torch.zeros(self.size)
-        for action in action_combination:
-            if action in catalog:
-                for a in action.split(","):
-                    self.take_action(a)
-            else:
-                self.take_action(action)
-        st = copy.deepcopy(self.state)
-        self.state = torch.zeros(self.size)
-        return st
+    
         

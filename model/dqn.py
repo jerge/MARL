@@ -22,7 +22,8 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
     eps = 0
     for i in range(n_examples):
         env.reset()
-        env.set_goal(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1])
+        ex = env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1]
+        env.set_goal(ex)
 
         done = False
         while not done:
@@ -145,8 +146,6 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
-            #print(new_state)
-            #print("\n")
             new_state = new_state[None,:]
             
             nonterminal_to_buffer = not finish_episode or steps == 99
@@ -181,12 +180,11 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         b = ep_reward
         c = R_avg[-1]
         d = eps
-        #print(type(np.array(q_buffer)))
         e = np.mean([torch.mean(q).cpu().detach().numpy() for q in q_buffer])
         print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,n_examples, b,c,d,e))
         # If running average > 0.95 (close to 1), the task is considered solved
         if R_avg[-1] > lim/(lim+1):
-            if test_examples(n_examples, dqn, env):
+            if test_examples(n_examples, dqn, env, difficulty=difficulty):
                 return R_buffer, R_avg, False
             lim +=1
             #return R_buffer, R_avg
@@ -213,10 +211,12 @@ batch_size = 128
 gamma = .95
 learning_rate = 1e-4
 
-ex_start = 1 # Amount of examples deemed correct
-ex_end = min(20, len(env.get_examples(filename=f"normal{env.size[0]}.squares")))
+difficulty = "generated"
 
-name=f"{env.size[0]}normal"
+ex_start = 0 # Amount of examples deemed correct
+ex_end = min(20, len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")))
+
+name=f"{env.size[0]}{difficulty}"
 
 dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
 
