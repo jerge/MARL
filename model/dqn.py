@@ -7,18 +7,9 @@ from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
 #import examples as ex
 import numpy as np
-import os
-
-if torch.cuda.is_available():
-    print('cuda')
-    device = torch.device("cuda")
-else:
-    print('cpu')
-    device = torch.device("cpu")
-
 
 # Tests if the current dqn can solve all n_examples with epsilon 0
-def test_examples(n_examples, dqn, env, difficulty="normal"):
+def test_examples(n_examples, dqn, env, device, difficulty="normal"):
     eps = 0
     for i in range(n_examples):
         env.reset()
@@ -30,7 +21,7 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
             state = env.get_state()
             state = state[None,:]
 
-            q_o_c, a = calc_q_and_take_action(dqn, state, eps)
+            q_o_c, a = calc_q_and_take_action(dqn, state, eps, device)
             ob, r, done, _ = env.step(a)
         if not r >= 0.9:
             print(f"Could not solve examples {i}")
@@ -50,7 +41,7 @@ def eps_greedy_policy(q_values, eps):
         return random.randint(0,q_values.shape[1]-1)
     return torch.argmax(q_values)
 
-def calc_q_and_take_action(dqn, state, eps):
+def calc_q_and_take_action(dqn, state, eps, device):
     '''
     Calculate Q-values for current state, and take an action according to an epsilon-greedy policy.
     Inputs:
@@ -86,7 +77,7 @@ def calculate_q_targets(q1_batch, r_batch, nonterminal_batch, gamma=.99):
     return Y
 
 # Answer:
-def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
+def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device):
     '''
     Sample mini-batch from replay buffer, and compute the mini-batch loss
     Inputs:
@@ -115,7 +106,9 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma):
     return loss
 
 # R_buf, R_avg, timedout?
-def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=False, batch_size=64, gamma=.94, n_examples=0, lim = 19):        
+def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "normal",
+                    enable_visualization=False, batch_size=64, 
+                    gamma=.94, n_examples=0, lim = 9):        
     Transition = namedtuple("Transition", ["s", "a", "r", "next_s", "t"])
     eps = 0.99
     eps_end = .03
@@ -128,7 +121,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         if random.random() < 0.1:
             prev_eps = eps
             eps = 1.
-        state = env.reset(n=n_examples) # Initial state
+        state = env.reset(n=n_examples, difficulty=difficulty) # Initial state
         state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
         finish_episode = False # Initialize
         ep_reward = 0 # Initialize "Episodic reward", i.e. the total reward for episode, when disregarding discount factor.
@@ -142,7 +135,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             # Take one step in environment. No need to compute gradients,
             # we will just store transition to replay buffer, and later sample a whole batch
             # from the replay buffer to actually take a gradient step.
-            q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps)
+            q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps, device)
             q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
@@ -157,7 +150,7 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
             ep_reward += reward
             # If replay buffer contains more than ? samples, perform one training step
             if replay_buffer.buffer_length > batch_size:
-                loss = sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma)
+                loss = sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device)
                 dqn.optimizer.zero_grad()
                 loss.backward()
                 dqn.optimizer.step()
@@ -184,61 +177,9 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=F
         print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,n_examples, b,c,d,e))
         # If running average > 0.95 (close to 1), the task is considered solved
         if R_avg[-1] > lim/(lim+1):
-            if test_examples(n_examples, dqn, env, difficulty=difficulty):
+            if test_examples(n_examples, dqn, env, device, difficulty=difficulty):
                 return R_buffer, R_avg, False
             lim +=1
             #return R_buffer, R_avg
     return R_buffer, R_avg, True
 
-
-# Create the environment
-env = gym.make('BuilderArch-v1')
-#ex1 = ex.get_examples7()[1]
-#print(ex1)
-env.reset()
-#env.set_goal(ex1)
-# Enable visualization? Does not work in all environments.
-enable_visualization = False
-
-# Initializations
-actions = env.action_space
-num_actions = actions.n
-num_states = env.size
-input_channels = 2
-
-num_episodes = 3000000
-batch_size = 128
-gamma = .95
-learning_rate = 1e-4
-
-difficulty = "generated"
-
-ex_start = 0 # Amount of examples deemed correct
-ex_end = min(20, len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")))
-
-name=f"{env.size[0]}{difficulty}"
-
-dqn = DeepQLearningModel(device, num_states, num_actions, learning_rate)
-
-# dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{ex_start}_interrupted.saved"))
-# dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{ex_start}_interrupted.saved"))
-if not os.path.isfile(f'./model_checkpoints/{name}{ex_start}.saved'):
-    torch.save(dqn.online_model.state_dict(),  f"./model_checkpoints/{name}{ex_start}.saved")
-    torch.save(dqn.offline_model.state_dict(), f"./model_checkpoints/{name}{ex_start}.saved")
-
-replay_buffer = ExperienceReplay(device, num_states, input_channels=input_channels)
-for i in range(ex_start, ex_end):
-    # Object holding our online / offline Q-Networks
-    dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{i}.saved"))
-    dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{i}.saved"))
-    # Train
-    try:
-        R, R_avg, timed_out = train_loop_dqn(dqn, env, replay_buffer, num_episodes, enable_visualization=enable_visualization, batch_size=batch_size, gamma=gamma, n_examples=i+1)
-        if timed_out:
-            torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i+1}_unsuc.saved")
-        else:
-            torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i+1}.saved")
-    except KeyboardInterrupt:
-        torch.save(dqn.online_model.state_dict(), f"./model_checkpoints/{name}{i}_interrupted.saved")
-        break
-    

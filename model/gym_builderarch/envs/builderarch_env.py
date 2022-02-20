@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (7,7)
+        self.size = (2,2)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
         self.invalid_action_punishment = torch.tensor(0)
@@ -49,12 +49,12 @@ class BuilderArchEnv(gym.Env):
         ob = self.get_state()
         return ob, reward, done, {}
 
-    def reset(self, n=1):
+    def reset(self, n=1, difficulty = "normal"):
         self.state = torch.zeros(self.size)
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(self.get_examples(filename=f"generated{self.size[0]}.squares")[:n])[1]
+        ex = random.choice(self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[:n])[1]
         self.set_goal(ex)
         return self.get_state()
 

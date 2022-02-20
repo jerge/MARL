@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from collections import deque
 import numpy as np
-
+import networks
 
 class ExperienceReplay:
     def __init__(self, device, num_states, buffer_size=1e+6, input_channels=1):
@@ -29,7 +29,11 @@ class ExperienceReplay:
         :return:
         '''
         ids = np.random.choice(a=self.buffer_length, size=batch_size)
-        state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
+        if type(self._num_states) == int:
+            state_batch = torch.zeros([batch_size,self._input_channels, self._num_states],
+                               dtype=torch.float)
+        else:
+            state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
                                dtype=torch.float)
         action_batch = torch.zeros([
             batch_size,
@@ -40,8 +44,15 @@ class ExperienceReplay:
         nonterminal_batch = torch.zeros([
             batch_size,
         ], dtype=torch.bool)
-        next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
+
+        if type(self._num_states) == int:
+            next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states],
+                               dtype=torch.float)
+        else:
+            next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
                                     dtype=torch.float)
+
+        
         for i, index in zip(range(batch_size), ids):
             state_batch[i, :] = self.__buffer[index].s
             action_batch[i] = self.__buffer[index].a
@@ -55,93 +66,38 @@ class ExperienceReplay:
             reward_batch,
             next_state_batch,
             nonterminal_batch
-            # torch.tensor(state_batch, dtype=torch.float, device=self._device),
-            # torch.tensor(action_batch, dtype=torch.long, device=self._device),
-            # torch.tensor(reward_batch, dtype=torch.float, device=self._device),
-            # torch.tensor(next_state_batch,
-            #              dtype=torch.float,
-            #              device=self._device),
-            # torch.tensor(nonterminal_batch,
-            #              dtype=torch.bool,
-            #              device=self._device),
         )
-
-
-class QNetwork(nn.Module):
-    def __init__(self, num_states, num_actions):
-        super().__init__()
-        self._num_states = num_states
-        self._num_actions = num_actions
-        keep_prob = 1
-        # (Batch, Number Channels, height, width)
-        out_channels = 2
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(2,out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'), #num_states[0], num_states[1]
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=1),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2, out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
-            nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=1 - keep_prob))
-        self.layer5 = nn.Sequential(
-            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1]*100),
-            nn.ReLU()
-        )
-        self.layer6 = nn.Linear(num_states[0] * num_states[1]*100, num_actions)
-
-        self.relu = nn.ReLU(inplace = True)
-        # Initialize all bias parameters to 0, according to old Keras implementation
-        #nn.init.zeros_(self._fc1.bias)
-        #nn.init.zeros_(self._fc2.bias)
-        #nn.init.zeros_(self._fc_final.bias)
-        # Initialize final layer uniformly in [-1e-6, 1e-6] range, according to old Keras implementation
-        #nn.init.uniform_(self._fc_final.weight, a=-1e-6, b=1e-6)
-
-    def forward(self, state):
-        #print(state.shape)
-        h = self.layer1(state)
-        #print(h.shape)
-        h = self.layer2(h)
-        #print(h.shape)
-        h = self.layer3(h)
-        #print(h.shape)
-        h = self.layer4(h)
-        #print(h.shape)
-        h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
-        #print(h.shape)
-        h = self.layer5(h)
-        #print(h.shape)
-        h = self.layer6(h)
-        #print(h.shape)
-        q_values = h
-        return q_values
 
 
 class DeepQLearningModel(object):
-    def __init__(self, device, num_states, num_actions, learning_rate):
+    def __init__(self, device, num_states, num_actions, num_channels, learning_rate, network_type):
         self._device = device
         self._num_states = num_states
         self._num_actions = num_actions
+        self._num_channels = num_channels
         self._lr = learning_rate
+        self.num_online_updates = 0
+
+        if network_type.lower() == "dense":
+            self.online_model = networks.DenseNetwork(self._num_states,
+                                     self._num_actions,
+                                     self._num_channels).to(device=self._device)
+            self.offline_model = networks.DenseNetwork(self._num_states, 
+                                      self._num_actions,
+                                      self._num_channels).to(device=self._device)
+        elif network_type.lower() == "conv" or network_type.lower() == "convolutional":
+            self.online_model = networks.ConvNetwork(self._num_states,
+                                     self._num_actions,
+                                     self._num_channels).to(device=self._device)
+            self.offline_model = networks.ConvNetwork(self._num_states, 
+                                      self._num_actions,
+                                      self._num_channels).to(device=self._device)
+        else:
+            assert False, f"Invalid network type {network_type}"
+
 
         # Define the two Q-networks
-        self.online_model = QNetwork(self._num_states,
-                                     self._num_actions).to(device=self._device)
-        self.offline_model = QNetwork(self._num_states, 
-                                      self._num_actions).to(device=self._device)
-
+        
         # Define optimizer. Should update online network parameters only.
         self.optimizer = torch.optim.RMSprop(self.online_model.parameters(),
                                              lr=self._lr)
