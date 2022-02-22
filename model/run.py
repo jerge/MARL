@@ -43,8 +43,9 @@ network_type = "dense" if n_args <= 1 else sys.argv[1]
 
 difficulty = "normal" if n_args <= 2 else sys.argv[2]
 
-end = 10 if n_args <= 3 else int(sys.argv[3])
-ex_end = min(end, len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")))
+max_size = len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares"))
+end = max_size if n_args <= 3 else int(sys.argv[3])
+ex_end = min(end, max_size)
 
 ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed correct
 
@@ -65,7 +66,7 @@ for i in range(ex_start, ex_end):
     dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{i}.saved"))
     # Train
     try:
-        R, R_avg, timed_out = train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, 
+        R_avg, timed_out = train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, 
                                                 difficulty=difficulty,
                                                 enable_visualization=enable_visualization, batch_size=batch_size, 
                                                 gamma=gamma, n_examples=i+1)

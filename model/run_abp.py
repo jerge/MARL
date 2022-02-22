@@ -48,8 +48,9 @@ assert network_type == "dense", "Not dense network has not been implemented, not
 
 difficulty = "normal" if n_args <= 2 else sys.argv[2]
 
-end = 10 if n_args <= 3 else int(sys.argv[3])
-ex_end = min(end, len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")))
+max_size = len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares"))
+end = max_size if n_args <= 3 else int(sys.argv[3])
+ex_end = min(end, max_size)
 
 ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed correct
 #------Sys args-----
@@ -76,7 +77,8 @@ for i in range(ex_start, ex_end):
     # Train
     try:
         R, R_avg, timed_out = train_loop(env, a_dqn, b_dqn, num_episodes, a_replay_buffer, b_replay_buffer,
-                                            device, i+1, difficulty, batch_size=batch_size)
+                                            device, i+1, difficulty,
+                                            training_architect = True, training_builder = False, batch_size=batch_size)
         if timed_out:
             torch.save(a_dqn.online_model.state_dict(), f"./model_checkpoints/{name}a{i+1}_unsuc.saved")
             torch.save(b_dqn.online_model.state_dict(), f"./model_checkpoints/{name}b{i+1}_unsuc.saved")

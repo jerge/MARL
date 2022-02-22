@@ -40,8 +40,9 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
 
 env = gym.make('BuilderArch-v1')
 # TODO: Make this cleaner using system arguments
-n = 4
-env.reset(n=n)
+n = 20
+difficulty = "generated"
+env.reset(n=n, difficulty = difficulty)
 
 print("------GOAL------")
 env.render_state(env.goal)
@@ -58,10 +59,11 @@ network_type = "dense"
 eps = 0
 
 num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
-assert network_type == "dense", "current implementation only supports dense (num_states[0]*num_states[1])"
+assert "dense" in network_type, "current implementation only supports dense (num_states[0]*num_states[1])"
 
 dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_actions, num_channels, learning_rate, network_type)
-mod = dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}normal{n}.saved"))
+name = f"{env.size[0]}{difficulty}{n}"
+dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}_interrupted.saved"))
 
 steps = 0
 done = False
@@ -83,4 +85,4 @@ print("------GOAL------")
 env.render_state(env.goal)
 print("----------------")
 
-test_examples(n,dqn,env)
+test_examples(n,dqn,env, difficulty=difficulty)

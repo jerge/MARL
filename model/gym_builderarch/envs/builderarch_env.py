@@ -107,16 +107,23 @@ class BuilderArchEnv(gym.Env):
             #self.state = self.state
         return True
 
+    # Binary reward function that accounts for n_steps by 0.99^steps
     def get_reward(self, done):
         if self.goal is None:
             return torch.tensor(0.)
         if done:
             if torch.equal(self.goal, self.state.long()):
                 return torch.tensor(1.) * (0.99**self.steps)
-        # If the previous actions all were to move, give negative reward
-        # if all([x in [3,4] for x in self.prev_actions]) and len(self.prev_actions) >= self.size[0]: 
-        #     return torch.tensor(-1.)
         return torch.tensor(0.)
+    
+    # Binary reward but also gives intermediate reward 1/(n_blocks) every time a block is
+    # placed in a potentially correct spot
+    def get_reward_2(self, prev_state, done):
+        reward = self.get_reward(done)
+        if torch.sum(self.state-self.prev_state) == 2:
+            reward += 0.1 * (1/(torch.sum(self.goal)//2))
+        return reward
+
     
     def get_examples(self, filename=f"generated7.squares"):
         import os

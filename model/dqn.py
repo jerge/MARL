@@ -5,7 +5,6 @@ import gym_builderarch
 from collections import namedtuple
 from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
-#import examples as ex
 import numpy as np
 
 # Tests if the current dqn can solve all n_examples with epsilon 0
@@ -52,14 +51,8 @@ def calc_q_and_take_action(dqn, state, eps, device):
         q_online_curr   - Q(s,a) for current state s. Numpy array, shape (1, num_actions) or  (num_actions,).
         curr_action     - Selected action (0 or 1, i.e., left or right), sampled from epsilon-greedy policy. Integer.
     '''
-    # dqn.online_model & dqn.offline_model are Pytorch modules for online / offline Q-networks, 
-    #   which take the state as input, and output the Q-values for all actions.
-    # Input shape (batch_size, num_states). Output shape (batch_size, num_actions).
-    #state = torch.from_numpy(state)
     q_online_curr = dqn.online_model(state.to(device=device)).cpu()
-    #q_o_c = q_online_curr.cpu().detach().numpy().reshape((-1,))
     action_i = eps_greedy_policy(q_online_curr, eps) # 
-    #curr_action = np.random.choice([0,1],size=1,p=actions)[0]
     return q_online_curr, torch.tensor(action_i)
 
 def calculate_q_targets(q1_batch, r_batch, nonterminal_batch, gamma=.99):
@@ -90,12 +83,6 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, devic
     '''
     # Sample a minibatch of transitions from replay buffer
     curr_state, curr_action, reward, next_state, nonterminal = replay_buffer.sample_minibatch(batch_size)
-
-    # FYI:
-    # dqn.online_model & dqn.offline_model are Pytorch modules for online / offline Q-networks, which take the state as input, and output the Q-values for all actions.
-    # Input shape (batch_size, num_states). Output shape (batch_size, num_actions).
-
-    # YOUR CODE HERE
     q_online_curr = dqn.online_model(curr_state.to(device=device)).cpu()
     with torch.no_grad():
         q_offline_next = dqn.offline_model(next_state.to(device=device)).cpu()
@@ -105,18 +92,19 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, devic
 
     return loss
 
-# R_buf, R_avg, timedout?
+# R_avg, timed_out
 def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "normal",
                     enable_visualization=False, batch_size=64, 
                     gamma=.94, n_examples=0, lim = 9):        
     Transition = namedtuple("Transition", ["s", "a", "r", "next_s", "t"])
+    last_lim_change = 0
+    init_lim = lim
     eps = 0.99
     eps_end = .03
     eps_decay = .999
     tau = 500
     cnt_updates = 0
-    R_buffer = []
-    R_avg = []
+    R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
     for i in range(num_episodes):
         if random.random() < 0.1:
             prev_eps = eps
@@ -125,7 +113,6 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
         state = state[None,:] # Add singleton dimension, to represent as batch of size 1.
         finish_episode = False # Initialize
         ep_reward = 0 # Initialize "Episodic reward", i.e. the total reward for episode, when disregarding discount factor.
-        q_buffer = []
         steps = 0
         while not finish_episode:
             if enable_visualization:
@@ -136,7 +123,6 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
             # we will just store transition to replay buffer, and later sample a whole batch
             # from the replay buffer to actually take a gradient step.
             q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps, device)
-            q_buffer.append(q_online_curr)
             new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
             #print(f"r:{reward},a:{curr_action}")
             new_state = new_state[None,:]
@@ -159,27 +145,30 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
                 if cnt_updates % tau == 0:
                     print(f"Update target network, using {n_examples} examples")
                     dqn.update_target_network()
-                
+
+
+        # Did we do a 100% randomness episode?
         if eps == 1:
             eps = prev_eps
-        eps = max(eps * eps_decay, eps_end) # decrease epsilon
-        # if eps < 0.20:
-        #     eps_decay = 0.9999      
-        R_buffer.append(ep_reward)
+        else:
+            eps = max(eps * eps_decay, eps_end) # decrease epsilon 
+            # Current performance should not be evaluated on episodes with 100% randomness
+            R_avg =  (1-gamma) * ep_reward + (gamma) * R_avg
         
-        # Running average of episodic rewards (total reward, disregarding discount factor)
-        R_avg.append(.05 * R_buffer[i] + .95 * R_avg[i-1]) if i > 0 else R_avg.append(R_buffer[i])
+
         a = i
         b = ep_reward
-        c = R_avg[-1]
+        c = R_avg
         d = eps
-        e = np.mean([torch.mean(q).cpu().detach().numpy() for q in q_buffer])
-        print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Avg Q: {:.4g}'.format(a,n_examples, b,c,d,e))
+        print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}'.format(a,n_examples, b,c,d))
         # If running average > 0.95 (close to 1), the task is considered solved
-        if R_avg[-1] > lim/(lim+1):
+        if R_avg > lim/(lim+1):
             if test_examples(n_examples, dqn, env, device, difficulty=difficulty):
-                return R_buffer, R_avg, False
-            lim +=1
-            #return R_buffer, R_avg
-    return R_buffer, R_avg, True
+                return R_avg, False
+            lim += 1
+            last_lim_change = i
+        if i - last_lim_change > 1000:
+            lim = init_lim
+            last_lim_change = i
+    return R_avg, True
 
