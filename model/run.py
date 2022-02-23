@@ -37,7 +37,7 @@ batch_size = 128
 gamma = .95
 learning_rate = 1e-4
 
-catalog = [torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
+catalog = [torch.tensor([3,3]),torch.tensor([2,2]),torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
 
 # Network type, difficulty, ex_end, ex_start
 n_args = len(sys.argv)
