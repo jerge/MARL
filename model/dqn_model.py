@@ -85,6 +85,13 @@ class DeepQLearningModel(object):
             self.offline_model = networks.DenseNetwork(self._num_states, 
                                       self._num_actions,
                                       self._num_channels).to(device=self._device)
+        elif network_type.lower() == "smalldense":
+            self.online_model = networks.SmallDenseNetwork(self._num_states,
+                                     self._num_actions,
+                                     self._num_channels).to(device=self._device)
+            self.offline_model = networks.SmallDenseNetwork(self._num_states, 
+                                      self._num_actions,
+                                      self._num_channels).to(device=self._device)
         elif network_type.lower() == "conv" or network_type.lower() == "convolutional":
             self.online_model = networks.ConvNetwork(self._num_states,
                                      self._num_actions,

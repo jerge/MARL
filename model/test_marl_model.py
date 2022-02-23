@@ -21,6 +21,7 @@ def calc_q_and_take_action(dqn, state, eps, device):
 
 def test_examples(n_examples, dqn, env, difficulty="normal"):
     eps = 0
+    r_threshold = 0
     for i in range(n_examples):
         env.reset()
         env.set_goal(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1])
@@ -32,15 +33,15 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
 
             q_o_c, a = calc_q_and_take_action(dqn, state, eps)
             ob, r, done, _ = env.step(a)
-        if not r >= 0.9:
-            print(f"Could not solve examples {i}")
+        if not r > r_threshold:
+            print(f"Could not solve examples {i}, reward {r} <= {r_threshold}")
             return False
     print(f"Solved all {n_examples} examples")
     return True
 
 device = torch.device("cpu")
 env = gym.make('BuilderArch-v1')
-n = 1
+n = 3
 env.reset(n=n)
 
 print("------GOAL------")
@@ -64,7 +65,7 @@ num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 network_type = "dense"
 
 a_dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_messages, 2, learning_rate, network_type)
-b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, network_type)
+b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, "small" + network_type)
 
 interrupted = "_interrupted" # set to empty string empty to not use interrupted
 a_dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}marlnormala{n-1}{interrupted}.saved"))

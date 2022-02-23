@@ -8,22 +8,27 @@ import random
 import numpy as np
 
 # Tests if the current dqn can solve all n_examples with epsilon 0
-def test_examples(n_examples, dqn, env, device, difficulty="normal"):
+def test_examples(n_examples, dqn, env, device, difficulty="normal", catalog=[]):
     eps = 0
+    r_threshold = 0
     for i in range(n_examples):
         env.reset()
         ex = env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1]
         env.set_goal(ex)
 
-        done = False
-        while not done:
+        finish_episode = False
+        while not finish_episode:
             state = env.get_state()
             state = state[None,:]
 
-            q_o_c, a = calc_q_and_take_action(dqn, state, eps, device)
-            ob, r, done, _ = env.step(a)
-        if not r >= 0.9:
-            print(f"Could not solve examples {i}")
+            q_o_c, curr_action = calc_q_and_take_action(dqn, state, eps, device)
+            if int(curr_action) >= env.action_space.n:
+                curr_action_list = catalog[int(curr_action-env.action_space.n)]
+                new_state, reward, finish_episode, _ = env.step(curr_action_list) # take one step in the evironment
+            else:
+                new_state, reward, finish_episode, _ = env.step(curr_action)
+        if not reward > r_threshold:
+            print(f"Could not solve example #{i}, reward {reward} <= {r_threshold}")
             return False
     print(f"Solved all {n_examples} examples")
     return True
@@ -92,16 +97,26 @@ def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, devic
 
     return loss
 
+def do_replay(replay_buffer, min_buffer_size, dqn, gamma, tau, batch_size, device):
+    if replay_buffer.buffer_length > min_buffer_size:
+        loss = sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device)
+        dqn.optimizer.zero_grad()
+        loss.backward()
+        dqn.optimizer.step()
+
+        dqn.num_online_updates += 1
+        if dqn.num_online_updates % tau == 0:
+            print("Update target network")
+            dqn.update_target_network()
+
 # R_avg, timed_out
 def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "normal",
                     enable_visualization=False, batch_size=64, 
-                    gamma=.94, n_examples=0, lim = 9):        
+                    gamma=.94, n_examples=0, lim = 9, catalog = []):        
     Transition = namedtuple("Transition", ["s", "a", "r", "next_s", "t"])
     last_lim_change = 0
     init_lim = lim
-    eps = 0.99
-    eps_end = .03
-    eps_decay = .999
+    (eps, eps_end, eps_decay) = (0.99, .03, .999)
     tau = 500
     cnt_updates = 0
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
@@ -123,7 +138,12 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
             # we will just store transition to replay buffer, and later sample a whole batch
             # from the replay buffer to actually take a gradient step.
             q_online_curr, curr_action = calc_q_and_take_action(dqn, state, eps, device)
-            new_state, reward, finish_episode, _ = env.step(curr_action) # take one step in the evironment
+            # If the action is not in the standard action space, get the action from the catalog
+            if int(curr_action) >= env.action_space.n:
+                curr_action_list = catalog[int(curr_action-env.action_space.n)]
+                new_state, reward, finish_episode, _ = env.step(curr_action_list) # take one step in the evironment
+            else:
+                new_state, reward, finish_episode, _ = env.step(curr_action)
             #print(f"r:{reward},a:{curr_action}")
             new_state = new_state[None,:]
             
@@ -134,17 +154,8 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
 
             state = new_state
             ep_reward += reward
-            # If replay buffer contains more than ? samples, perform one training step
-            if replay_buffer.buffer_length > batch_size:
-                loss = sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device)
-                dqn.optimizer.zero_grad()
-                loss.backward()
-                dqn.optimizer.step()
-
-                cnt_updates += 1
-                if cnt_updates % tau == 0:
-                    print(f"Update target network, using {n_examples} examples")
-                    dqn.update_target_network()
+            # If replay buffer contains more than `batch_size` samples, perform one training step
+            do_replay(replay_buffer, batch_size, dqn, gamma, tau, batch_size, device)
 
 
         # Did we do a 100% randomness episode?
@@ -162,8 +173,8 @@ def train_loop_dqn(dqn, env, replay_buffer, num_episodes, device, difficulty = "
         d = eps
         print('Episode: {:d}, Ex: {:.0f}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}'.format(a,n_examples, b,c,d))
         # If running average > 0.95 (close to 1), the task is considered solved
-        if R_avg > lim/(lim+1):
-            if test_examples(n_examples, dqn, env, device, difficulty=difficulty):
+        if R_avg > lim/(lim+1)*0.81:
+            if test_examples(n_examples, dqn, env, device, difficulty=difficulty, catalog=catalog):
                 return R_avg, False
             lim += 1
             last_lim_change = i

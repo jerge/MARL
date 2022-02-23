@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (2,2)
+        self.size = (3,3)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
         self.invalid_action_punishment = torch.tensor(0)
@@ -76,6 +76,8 @@ class BuilderArchEnv(gym.Env):
     
     # Returns true if the action was allowed and mutates the state if it was allowed
     def take_action(self, action):
+        if len(action.size()) != 0:
+            return self.take_actions(action)
         action = int(action)
         assert self.action_space.contains(action), f"{action!r} ({type(action)}) invalid"
         # Returns the top location of every column
@@ -107,13 +109,17 @@ class BuilderArchEnv(gym.Env):
             #self.state = self.state
         return True
 
+    # Returns true if any of the actions were allowed and mutates the state
+    def take_actions(self, action_list):
+        return any([self.take_action(action) for action in action_list])
+
     # Binary reward function that accounts for n_steps by 0.99^steps
     def get_reward(self, done):
         if self.goal is None:
             return torch.tensor(0.)
         if done:
             if torch.equal(self.goal, self.state.long()):
-                return torch.tensor(1.) * (0.99**self.steps)
+                return torch.tensor(1.) * (0.90**self.steps)
         return torch.tensor(0.)
     
     # Binary reward but also gives intermediate reward 1/(n_blocks) every time a block is

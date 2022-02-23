@@ -57,7 +57,7 @@ ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed co
 
 name=f"{env.size[0]}marl{difficulty}"
 a_dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_messages, num_channels, learning_rate, network_type)
-b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, network_type)
+b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, "small" + network_type)
 
 # a_dqn.online_model.load_state_dict(torch.load( f"./model_checkpoints/{name}a{ex_start}_interrupted.saved"))
 # a_dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}a{ex_start}_interrupted.saved"))
@@ -76,9 +76,9 @@ for i in range(ex_start, ex_end):
     b_dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}b{i}.saved"))
     # Train
     try:
-        R, R_avg, timed_out = train_loop(env, a_dqn, b_dqn, num_episodes, a_replay_buffer, b_replay_buffer,
-                                            device, i+1, difficulty,
-                                            training_architect = True, training_builder = False, batch_size=batch_size)
+        R_avg, timed_out = train_loop(env, a_dqn, b_dqn, num_episodes, a_replay_buffer, b_replay_buffer,
+                                            device, i+1, difficulty, catalog,
+                                            training_architect = False, training_builder = True, batch_size=batch_size)
         if timed_out:
             torch.save(a_dqn.online_model.state_dict(), f"./model_checkpoints/{name}a{i+1}_unsuc.saved")
             torch.save(b_dqn.online_model.state_dict(), f"./model_checkpoints/{name}b{i+1}_unsuc.saved")
