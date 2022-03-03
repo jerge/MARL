@@ -38,13 +38,14 @@ class BuilderArchEnv(gym.Env):
     
     def step(self, action):
         self.steps += 1
-        #prev_state = copy.deepcopy(self.state)
+        prev_state = copy.deepcopy(self.state)
         allowed = self.take_action(action)
 
         done = self.is_done()
         
         self.prev_actions.append(action)
-        reward = self.get_reward(done) if allowed else self.invalid_action_punishment
+        #reward = self.get_reward(done) if allowed else self.invalid_action_punishment
+        reward = self.get_reward_2(prev_state, done) if allowed else self.invalid_action_punishment
 
         ob = self.get_state()
         return ob, reward, done, {}
@@ -122,12 +123,12 @@ class BuilderArchEnv(gym.Env):
                 return torch.tensor(1.) * (0.90**self.steps)
         return torch.tensor(0.)
     
-    # Binary reward but also gives intermediate reward 1/(n_blocks) every time a block is
+    # Binary reward but also gives intermediate reward 0.1 * 1/(n_blocks) every time a block is
     # placed in a potentially correct spot
     def get_reward_2(self, prev_state, done):
         reward = self.get_reward(done)
-        if torch.sum(self.state-self.prev_state) == 2:
-            reward += 0.1 * (1/(torch.sum(self.goal)//2))
+        if torch.sum(self.state-prev_state) == 2:
+            reward += 0.1 * (1/(torch.sum(self.goal)//2)) * (0.90 ** self.steps)
         return reward
 
     

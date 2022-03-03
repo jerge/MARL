@@ -41,7 +41,7 @@ def test_examples(n_examples, dqn, env, difficulty="normal"):
 
 device = torch.device("cpu")
 env = gym.make('BuilderArch-v1')
-n = 3
+n = 16
 env.reset(n=n)
 
 print("------GOAL------")
@@ -51,8 +51,10 @@ device = torch.device("cpu")
 
 actions = env.action_space
 num_actions = actions.n
-catalog = [] #catalog = [[2,2],[3,3]]
-action_list = ['Vert','Hori','Left','Right'] + [str(item) for item in catalog]
+catalog = [torch.tensor([3,3]),torch.tensor([2,2]),torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
+action_list = ['Vert','Hori','Left','Right']
+catalog_names = [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in catalog]]
+action_list = action_list + catalog_names
 num_messages = num_actions + len(catalog)
 
 num_states = env.size
@@ -65,11 +67,11 @@ num_episodes = batch_size = gamma = learning_rate = 1 # Unnecessary variables
 network_type = "dense"
 
 a_dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_messages, 2, learning_rate, network_type)
-b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, "small" + network_type)
+b_dqn = DeepQLearningModel(device, num_messages, num_actions + len(catalog), 1, learning_rate, "small" + network_type)
 
 interrupted = "_interrupted" # set to empty string empty to not use interrupted
-a_dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}marlnormala{n-1}{interrupted}.saved"))
-b_dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}marlnormalb{n-1}{interrupted}.saved"))
+a_dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}marlcnormala{n-1}{interrupted}.saved"))
+b_dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{env.size[0]}marlcnormalb{n-1}{interrupted}.saved"))
 
 steps = 0
 done = False
@@ -84,11 +86,15 @@ while not done:
     message_one_hot = message_one_hot[None,:]
     b_q_values, action_one_hot =  calc_q_and_take_action(b_dqn, message_one_hot, eps, device)
     action = torch.argmax(action_one_hot)
-    ob, r, done, _ = env.step(action)
+    if int(action) >= env.action_space.n:
+        action_tensor = catalog[int(action-env.action_space.n)]
+        new_state, reward, done, _ = env.step(action_tensor) # take one step in the evironment
+    else:
+        new_state, reward, done, _ = env.step(action)
     steps += 1
     print(list(zip(action_list,[round(x,3) for x in a_q_values.tolist()[0]])))
     print(list(zip(action_list,[round(x,3) for x in b_q_values.tolist()[0]])))
-    print(f"Message: {action_list[message]}, Action: {action_list[action]}, Reward: {r}, New loc: {env.loc}")
+    print(f"Message: {action_list[message]}, Action: {action_list[action]}, Reward: {reward}, New loc: {env.loc}")
 print(f"\n-----RESULT----- in {steps} steps with {eps*100}% randomness")
 env.render()
 print("----------------")

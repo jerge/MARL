@@ -9,7 +9,7 @@ import random
 import numpy as np
 
 # Tests if the current dqn can solve all n_examples with epsilon 0
-def test_examples(n_examples, architect, builder, env, device, difficulty="normal"):
+def test_examples(n_examples, architect, builder, env, device, catalog, difficulty="normal"):
     eps = 0
     r_threshold = 0
     for i in range(n_examples):
@@ -24,10 +24,14 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
 
             _, m = calc_q_and_take_action(architect, state, eps, device)
             m = m[None,:]
-            _, a = calc_q_and_take_action(builder, m, eps, device)
-            a = torch.argmax(a)
-            ob, r, done, _ = env.step(a)
-        if not r > r_threshold:
+            _, action = calc_q_and_take_action(builder, m, eps, device)
+            action = torch.argmax(action)
+            if int(action) >= env.action_space.n:
+                action_list = catalog[int(action-env.action_space.n)]
+                new_state, reward, done, _ = env.step(action_list) # take one step in the evironment
+            else:
+                new_state, reward, done, _ = env.step(action)
+        if not reward > r_threshold:
             print(f"Could not solve example #{i}")
             return False
     print(f"Solved all {n_examples} examples. Reward threshold >{r_threshold}")
@@ -129,7 +133,11 @@ def train_loop(env, architect, builder, n_episodes, a_replay_buffer, b_replay_bu
             action = torch.argmax(action_one_hot)
 
             # Env: Take action
-            new_state, reward, done, _ = env.step(action)
+            if int(action) >= env.action_space.n:
+                action_list = catalog[int(action-env.action_space.n)]
+                new_state, reward, done, _ = env.step(action_list) # take one step in the evironment
+            else:
+                new_state, reward, done, _ = env.step(action)
             new_state = new_state[None,:]
             
             nonterminal_to_buffer = not done or steps == 99
@@ -163,7 +171,7 @@ def train_loop(env, architect, builder, n_episodes, a_replay_buffer, b_replay_bu
         #if R_avg > lim/(lim+1):
         if trial:
             print("---------------------------------")
-            if test_examples(n_examples, architect, builder, env, device, difficulty=difficulty):
+            if test_examples(n_examples, architect, builder, env, device, catalog, difficulty=difficulty):
                 return R_avg, False
             lim += 1
             print("---------------------------------")

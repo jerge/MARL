@@ -26,7 +26,7 @@ env.reset()
 enable_visualization = False
 
 # TODO: gör det skillnad om man randomizar ordning på katalog? Typ så den inte overfittar på de 4 första
-catalog = [] #catalog = [[2,2],[3,3]]
+catalog = [torch.tensor([3,3]),torch.tensor([2,2]),torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
 
 # Initializations
 actions = env.action_space
@@ -55,9 +55,9 @@ ex_end = min(end, max_size)
 ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed correct
 #------Sys args-----
 
-name=f"{env.size[0]}marl{difficulty}"
+name=f"{env.size[0]}marlc{difficulty}"
 a_dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_messages, num_channels, learning_rate, network_type)
-b_dqn = DeepQLearningModel(device, num_messages, num_actions, 1, learning_rate, "small" + network_type)
+b_dqn = DeepQLearningModel(device, num_messages, num_messages, 1, learning_rate, "small" + network_type)
 
 # a_dqn.online_model.load_state_dict(torch.load( f"./model_checkpoints/{name}a{ex_start}_interrupted.saved"))
 # a_dqn.offline_model.load_state_dict(torch.load(f"./model_checkpoints/{name}a{ex_start}_interrupted.saved"))

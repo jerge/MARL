@@ -21,30 +21,11 @@ def calc_q_and_take_action(dqn, state, eps):
 
     return q_online_curr, torch.tensor(action_i)
 
-# def test_examples(n_examples, dqn, env, difficulty="normal"):
-#     eps = 0
-#     for i in range(n_examples):
-#         env.reset()
-#         env.set_goal(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1])
-
-#         done = False
-#         while not done:
-#             state = env.get_state()
-#             state = state[None,:]
-
-#             q_o_c, a = calc_q_and_take_action(dqn, state, eps)
-
-#             ob, r, done, _ = env.step(a)
-#         if not r >= 0.9:
-#             print(f"Could not solve examples {i}")
-#             return False
-#     print(f"Solved all {n_examples} examples")
-#     return True
-
+        
 env = gym.make('BuilderArch-v1')
 # TODO: Make this cleaner using system arguments
-n = 7
-difficulty = "normal"
+n = 17
+difficulty = "generated"
 env.reset(n=n, difficulty = difficulty)
 
 print("------GOAL------")
@@ -54,8 +35,12 @@ device = torch.device("cpu")
 actions = env.action_space
 num_actions = actions.n
 
-catalog = [torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
-action_list = ['Vert','Hori','Left','Right'] + catalog
+catalog = [torch.tensor([3,3]),torch.tensor([2,2]),torch.tensor([3,0]),torch.tensor([3,1]),torch.tensor([1,1])]
+action_list = ['Vert','Hori','Left','Right']
+catalog_names = [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in catalog]]
+#action_list[item][0]
+print(catalog_names)
+action_list = action_list + catalog_names
 
 num_states = env.size
 num_channels = 2
@@ -69,7 +54,7 @@ assert "dense" in network_type, "current implementation only supports dense (num
 
 dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_actions + len(catalog), num_channels, learning_rate, network_type)
 name = f"{env.size[0]}{difficulty}cc{n}"
-dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}_interrupted.saved"))
+dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}.saved", map_location=torch.device('cpu'))) #_interrupted
 
 steps = 0
 finish_episode = False
