@@ -1,6 +1,7 @@
 from collections import namedtuple
 from dqn_model import ExperienceReplay
 from abc import ABC, abstractmethod
+import torch
 
 class Agent(ABC):
     GlobalTransition = namedtuple("GlobalTransition", ["s", "m", "a", "r", "t"])
@@ -21,17 +22,31 @@ class Agent(ABC):
         self.gamma = gamma
 
         self.dqn = self.create_model(network_type)
+
+        self.symbols = dict()
+    
+    # Returns either the learnt symbolic actions for the input or
+    # false if the symbol is not learnt
+    def use_symbol(self, inp):
+        return self.symbols.get(tuple(inp.tolist()), False)
+
+    def to_primitives(self, sequence):
+        # sequence :: String
+        primitive_sequence = []
+        for a in [int(a) for a in sequence]:
+            primitive_sequence.extend(self.catalog[a-self.num_actions]) if a >= self.num_actions \
+                else primitive_sequence.append(a)
+        return primitive_sequence
+
+    def increase_catalog(self, sequence):
+        # sequence :: String
+        if not len(self.catalog) < self.max_catalog_size:
+            print(f"The catalog {self.catalog} is too big and cannot be increased, max_size = {self.max_catalog_size}")
+            return
         
-
-
-    def increase_catalog(self, item):
-        assert len(catalog) < max_catalog_size, f"The catalog {catalog} is too big and cannot be increased, max_size = {max_catalog_size}"
-        catalog.append(item)
-
-
-# batch_size = 128
-# gamma = .95
-# learning_rate = 1e-4
+        primitive_sequence = self.to_primitives(sequence)
+        if not primitive_sequence in [c.tolist() for c in self.catalog]:
+            self.catalog.append(torch.tensor(primitive_sequence))
 
     @abstractmethod
     def create_model(self, network_type):

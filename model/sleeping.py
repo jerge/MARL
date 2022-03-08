@@ -3,6 +3,7 @@ import collections
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 def get_solution(name):
     df = pd.read_csv(f)
@@ -13,8 +14,7 @@ def get_solution(name):
 
 # Returns set containing all LCS
 # for X[0..m-1], Y[0..n-1]
-def findLCS(x, y, m, n):
- 
+def findLCS(x, y, m, n): 
     # construct a set to store possible LCS
     s = set()
  
@@ -56,21 +56,34 @@ def findLCS(x, y, m, n):
     return s
 
 def decide_abstraction(lcs,n):
-    # Currently just taking most common words
-    good_abstractions = []
-    for i in range(2,20):
-        ws = [word for word, count in lcs.most_common() if len(word) == i]
-        cs = [count for word, count in lcs.most_common() if len(word) == i]
-        good_abstractions.append(ws[np.argmax(cs)])
-    print(good_abstractions)
-    #filtered_dict = {word: count for word, count in lcs.most_common() if len(word) >= min_threshold}
-    return good_abstractions#list(filtered_dict.keys())[:n]
+    # Currently just taking n most common words
 
-def create_catalog(words):
-    with open('catalog.csv', 'a') as f:
+    print([word for word, count in lcs.most_common() if len(word) > 1][:n])
+    return [word for word, count in lcs.most_common() if len(word) > 1][:n]
+    # for i in range(2,20):
+    #     ws = [word for word, count in lcs.most_common() if len(word) == i]
+    #     cs = [count for word, count in lcs.most_common() if len(word) == i]
+    #     if len(ws) > 0:
+    #         good_abstractions.append(ws[np.argmax(cs)])
+    # print(good_abstractions)
+    # #filtered_dict = {word: count for word, count in lcs.most_common() if len(word) >= min_threshold}
+    # # NOTE: CAN BE NONE
+    # return good_abstractions#list(filtered_dict.keys())[:n]
+
+def save_catalog(name, catalog):
+    with open(f'{name}.csv', 'w') as f:
         writer = csv.writer(f)
-        for word in words:
-            writer.writerow(word)
+        for row in catalog:
+            writer.writerow(row.tolist())
+
+def import_catalog(name, agent):
+    if not os.path.isfile(f"{name}.csv"):
+        print(f"WARNING: The catalog {name} does not exist")
+        return
+    with open(f'{name}.csv', 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            agent.increase_catalog(row)
 
 #[(w,1)]
 def graph_count(lcs):
@@ -80,33 +93,37 @@ def graph_count(lcs):
     plt.scatter(lengths, counts)
     z = np.polyfit(lengths, counts, 2)
     p = np.poly1d(z)
-    plt.plot(range(0,10),p(range(0,10)),"r--")
+    plt.plot(range(0,max(lengths)),p(range(0,max(lengths))),"r--")
     plt.show()
 
 #globtrans, =([s,m,a,r,t])
 
+# Removes stupid things such as alternating "l", "r" and going right until you get back to the starting position
+def cleanse_transition(transition, width):
+    return transition.replace("23","").replace("32","").replace("3"*width, "").replace("2"*width,"")
 
-
-#df = pd.read_csv('bruteforce.csv')
-
-def get_abstract(epochs):
-    sols = ""
+def get_abstract(epochs, width):
+    sols = []
     for epoch in epochs:
-        actions = epoch.a
-        sols.append([str(actions).strip().replace(",", "").replace(" ", "").replace("(", "").replace(")", ""))
+        trans = ""
+        for transition in epoch:
+            actions = transition.a
+            if actions != None:
+                trans = trans + (str(int(actions)))
+        sols.append(cleanse_transition(trans,width))
 
-
-    #sols = [str(sol).strip().replace(",", "").replace(" ", "").replace("(", "").replace(")", "") for sol in df['actions'] if sol != "()"]
     # Maximum string length
     N = 100
+    global L
     L = [[0 for i in range(N)]
             for j in range(N)]
     lcs = collections.Counter()
-    for i in range(len(sols)): 
+    print(sols)
+    for i in range(len(sols)):
+        print(f"zzz{i}")
         for j in range(i, len(sols)):
             for x in findLCS(sols[i], sols[j], len(sols[i]), len(sols[j])):
                 lcs[x] += 1
-
-    words = decide_abstraction(lcs,3)
+    words = decide_abstraction(lcs,1)
+    #graph_count(lcs)
     return words
-    create_catalog(words)

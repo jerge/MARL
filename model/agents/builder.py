@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, counter
 from agents import Agent
 from dqn_model import DeepQLearningModel
 class Builder(Agent):
@@ -31,12 +31,35 @@ class Builder(Agent):
                                     self.learning_rate, 
                                     network_type)
 
+    # Checks through the entire replay_buffer to see if a symbol has been properly learnt
+    def learn_symbol(self):
+        threshold = 0.95
+        # state -> Counter() :: action -> int
+        state_dict = dict()
+        # IS TRANSIOTON.S a proper key?
+        for transition in self.replay_buffer.sample_minibatch(batch_size=10000):
+            # Skip if already learnt
+            s = tuple(transition.s.tolist())
+            a = tuple(transition.a.tolist())
+            if s in self.symbols.keys():
+                continue
+            if state_dict[s] == None:
+                state_dict[s] = Counter()
+            state_dict[s][a] += 1
+        for s, counter in state_dict.items():
+            total = sum(counter.values())
+            for a, amount in counter.items():
+                if amount / total > threshold:
+                    self.symbols[s] = a 
+                    print(f"Added {a} to symbol_list for state {s}")
+
+
     
     def build(self, action, env):
         if int(action) >= env.action_space.n:
             action = self.catalog[int(action-env.action_space.n)]
-        new_state, reward, done, _ = env.step(action)
-        return (new_state, reward, done)
+        new_state, env_reward, done, success = env.step(action)
+        return (new_state, env_reward, done, success)
 
 
 

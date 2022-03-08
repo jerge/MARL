@@ -17,7 +17,7 @@ class BuilderArchEnv(gym.Env):
         self.size = (7,7)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # h v l r
-        self.invalid_action_punishment = torch.tensor(0)
+        self.invalid_action_punishment = torch.tensor(0.)
         self.state = None
         self.steps = 0
         self.max_steps = 100
@@ -44,11 +44,11 @@ class BuilderArchEnv(gym.Env):
         done = self.is_done()
         
         self.prev_actions.append(action)
-        #reward = self.get_reward(done) if allowed else self.invalid_action_punishment
-        reward = self.get_reward_2(prev_state, done) if allowed else self.invalid_action_punishment
+        # (reward, success) = self.get_reward(done) if allowed else (self.invalid_action_punishment, False)
+        (reward, success) = self.get_reward_2(prev_state, done) if allowed else (self.invalid_action_punishment, False)
 
         ob = self.get_state()
-        return ob, reward, done, {}
+        return ob, reward, done, success
 
     def reset(self, n=1, difficulty = "normal"):
         self.state = torch.zeros(self.size)
@@ -115,21 +115,26 @@ class BuilderArchEnv(gym.Env):
         return any([self.take_action(action) for action in action_list])
 
     # Binary reward function that accounts for n_steps by 0.99^steps
+    # Also returns if the construct was perfect
     def get_reward(self, done):
         if self.goal is None:
             return torch.tensor(0.)
         if done:
             if torch.equal(self.goal, self.state.long()):
-                return torch.tensor(1.) * (0.90**self.steps)
-        return torch.tensor(0.)
+                return (torch.tensor(1.) * (0.90**self.steps), True)
+        return (torch.tensor(0.), False)
     
     # Binary reward but also gives intermediate reward 0.1 * 1/(n_blocks) every time a block is
     # placed in a potentially correct spot
     def get_reward_2(self, prev_state, done):
-        reward = self.get_reward(done)
+        (reward, success) = self.get_reward(done)
         if torch.sum(self.state-prev_state) == 2:
             reward += 0.1 * (1/(torch.sum(self.goal)//2)) * (0.90 ** self.steps)
-        return reward
+        return (reward, success)
+
+    def get_reward_3(self, done):
+        (reward, success) = self.get_reward(done)
+        return (reward * (torch.sum(self.goal)//2), success)
 
     
     def get_examples(self, filename=f"generated7.squares"):
