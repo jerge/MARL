@@ -8,17 +8,19 @@ from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
 import numpy as np
 from sleeping import get_abstract
-
+import pandas as pd
+import os
 
 # Tests if the current dqn can solve all n_examples with epsilon 0
-def test_examples(n_examples, architect, builder, env, device, difficulty="normal", pretty_test=False):
-    eps = 0
+def test_examples(n_examples, architect, builder, env, device, difficulty="normal", eps = 0, pretty_test=False, evaluation = False):
+    successful = True
     if pretty_test:
         action_list = ['Vert','Hori','Left','Right']
         a_catalog_names = action_list + [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in architect.catalog]]
         b_catalog_names = action_list + [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in builder.catalog]]
 
     #r_threshold = 0
+    rewards = []
     for i in range(n_examples):
         env.reset()
         # Get the i:th example and set it as goal
@@ -29,6 +31,7 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
             env.render_state(env.goal)
             print("----------------")
         done = False
+        ep_reward = 0
         while not done:
             state = env.get_state()[None,:]
             if pretty_test:
@@ -45,30 +48,29 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
             action = message # TODO TEMP
             # Env: Take action
             (new_state, reward, done, success) = builder.build(action, env)
+            ep_reward += reward
             if pretty_test:
                 print(list(zip(a_catalog_names,[round(x,3) for x in q_a.tolist()[0]])))
                 print(list(zip(b_catalog_names,[round(x,3) for x in q_b.tolist()[0]])))
                 print(f"Message: {a_catalog_names[message]}, Action: {b_catalog_names[action]}, Reward: {reward}, New loc: {env.loc}")
 
             new_state = new_state[None,:]
+        rewards.append(ep_reward)
         if not success:
+            successful = False
+        if not evaluation:
             print("------GOAL------")
             env.render_state(env.goal)
             print("----------------")
             print(f"\n-----RESULT----- in {env.steps} steps with {eps*100}% randomness")
             env.render()
             print("----------------\n\n")
+        if not success and not evaluation:
             print(f"Could not solve example #{i}")
-            return False
-        elif pretty_test:
-            print("------GOAL------")
-            env.render_state(env.goal)
-            print("----------------")
-            print(f"\n-----RESULT----- in {env.steps} steps with {eps*100}% randomness")
-            env.render()
-            print("----------------\n\n")
-    print(f"Solved all {n_examples} examples.")
-    return True
+            return (False, reward)
+    if successful:
+        print(f"Solved all {n_examples} examples.")
+    return (successful,rewards)
 
 def eps_greedy_policy(q_values, eps):
     if random.random() < eps:
@@ -171,7 +173,7 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
 
 def train_loop(env, architect, builder, n_episodes, 
                 device, n_examples, difficulty,
-                batch_size = 128, lim = 9):
+                batch_size = 128, lim = 9, df_path = "."):
     min_buffer_size = 100
     (eps, eps_decay, eps_end) = (0.99, 0.999, 0.03)
     (last_lim_change, init_lim) = (0, lim)
@@ -179,7 +181,8 @@ def train_loop(env, architect, builder, n_episodes,
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
     tot_steps = 0
     trial = False
-
+    
+    #reward_df = pd.DataFrame(columns = ["num_episodes","R_avg","n_examples"])
     episode_buffer = deque(maxlen=100) # queue of entire episodes
     for i in range(n_episodes):
 
@@ -193,6 +196,7 @@ def train_loop(env, architect, builder, n_episodes,
         t = "a,b" if architect.training and builder.training else "a" if architect.training else "b" if builder.training else "none"
         print('Episode: {:d}, Ex: {:.0f}, Steps:{: 4d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Trainee: {}, Cat: {}'.format(
                                                                                     i, n_examples, steps, ep_reward, R_avg, eps, t, architect.catalog))
+        #reward_df = reward_df.append({"num_episodes" : i,"R_avg" : float(R_avg),"n_examples" : n_examples}, ignore_index = True)
 
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
@@ -204,8 +208,23 @@ def train_loop(env, architect, builder, n_episodes,
 
         #if R_avg > lim/(lim+1):
         if trial:
+            cleared_examples = test_examples(n_examples, architect, builder, env, device, difficulty=difficulty)[0]
+            # --- Record current performance ---
+            if i < 1000 or i % 1000 < 10 or cleared_examples:
+                rewards = []
+                for _ in range(3):
+                    with torch.no_grad():
+                        rewards = rewards + test_examples(30, architect, builder, env, device, difficulty = difficulty, eps = eps, evaluation = True)[1]
+                if os.path.isfile(f'{df_path}/rewards{n_examples}.csv'):
+                    df = pd.read_csv(f'{df_path}/rewards{n_examples}.csv')
+                else:
+                    df = pd.DataFrame(columns = ["num_episodes","R_avg"])
+                df = df.append(pd.DataFrame([(i,np.mean(rewards))], columns = ["num_episodes","R_avg"]))
+                df.to_csv(f'{df_path}/rewards{n_examples}.csv', index=False)
+            # ----------------------------------
+            
             print("---------------------------------")
-            if test_examples(n_examples, architect, builder, env, device, difficulty=difficulty):
+            if cleared_examples:
                 return R_avg, False
             print("---------------------------------")
             # If fail, increase catalog size

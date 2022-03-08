@@ -1,4 +1,4 @@
-from collections import namedtuple, counter
+from collections import namedtuple, Counter
 from agents import Agent
 from dqn_model import DeepQLearningModel
 class Builder(Agent):
