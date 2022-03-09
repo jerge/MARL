@@ -16,7 +16,7 @@ class BuilderArchEnv(gym.Env):
         self.goal = None
         self.size = (7,7)
         self.loc = 0
-        self.action_space = spaces.Discrete(4) # h v l r
+        self.action_space = spaces.Discrete(4) # v h l r
         self.invalid_action_punishment = torch.tensor(0.)
         self.state = None
         self.steps = 0
@@ -55,7 +55,10 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        ex = random.choice(self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[:n])[1]
+        if random.randint(0,3) == 0:
+            ex = self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[n][1]
+        else:
+            ex = random.choice(self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[:n])[1]
         self.set_goal(ex)
         return self.get_state()
 

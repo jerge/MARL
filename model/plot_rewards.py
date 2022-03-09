@@ -16,7 +16,8 @@ for i,path in enumerate(paths):
         df = pd.read_csv(f'{path}/rewards{n}.csv')
         #ax = ax.plot(df['num_episodes'], df['R_avg'])
         #df = df.groupby(np.arange(len(df)) // 50).mean()
-        ax.plot(df['num_episodes'], df['R_avg'], label = n)
+        print(df.columns)
+        ax.plot(df['num_episodes'], df['R_avg_tot'], label = n)
         n += 1
     ax.legend()
 plt.show()

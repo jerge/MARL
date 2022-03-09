@@ -42,10 +42,10 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
             message_one_hot = message_one_hot[None,:]
             
             # B: Generate action from message
-            q_b, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False) # eps
+            q_b, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False, symbolic = True) # eps
             action = torch.argmax(action_one_hot[:builder.num_actions + len(builder.catalog)])
             action_one_hot = action_one_hot[None,:]
-            action = message # TODO TEMP
+            #action = message # TODO TEMP
             # Env: Take action
             (new_state, reward, done, success) = builder.build(action, env)
             ep_reward += reward
@@ -79,7 +79,12 @@ def eps_greedy_policy(q_values, eps):
         return r
     return torch.argmax(q_values)
 
-def calc_q_and_take_action(agent, state, eps, device, debug = False):
+def calc_q_and_take_action(agent, state, eps, device, debug = False, symbolic = False):
+    if symbolic:
+        sym = agent.use_symbol(state)
+        if sym != None:
+            return {}, F.one_hot(torch.tensor(sym), num_classes = agent.num_actions + agent.max_catalog_size).float()
+
     q_online_curr = agent.dqn.online_model(state.to(device=device)).cpu()
     # Crop the maximum to not allow actions outside the current catalog
     action_i = torch.tensor(eps_greedy_policy(q_online_curr[0][:agent.num_actions + len(agent.catalog)][None,:], eps))
@@ -132,19 +137,19 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
         else:
             with torch.no_grad():
                 _, message_one_hot = calc_q_and_take_action(architect, state, eps_end, device)
-        message = torch.argmax(message_one_hot[:architect.num_actions + len(architect.catalog)])
+        message = torch.argmax(message_one_hot)#[:architect.num_actions + len(architect.catalog)])
         message_one_hot = message_one_hot[None,:]
         
         # B: Generate action from message
         if builder.training:
             with torch.no_grad():
-                q, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False) # eps
+                q, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, symbolic = True) # eps
         else:
             with torch.no_grad():
-                _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device)
-        action = torch.argmax(action_one_hot[:builder.num_actions + len(builder.catalog)])
+                _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device, symbolic = True)
+        action = torch.argmax(action_one_hot)#[:builder.num_actions + len(builder.catalog)])
         action_one_hot = action_one_hot[None,:]
-        action = message # TODO Temp
+        #action = message # TODO Temp
 
         # Env: Take action
         (new_state, reward, done, success) = builder.build(action, env)
@@ -173,14 +178,14 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
 
 def train_loop(env, architect, builder, n_episodes, 
                 device, n_examples, difficulty,
-                batch_size = 128, lim = 9, df_path = "."):
+                batch_size = 512, lim = 9, df_path = "."):
     min_buffer_size = 100
     (eps, eps_decay, eps_end) = (0.99, 0.999, 0.03)
     (last_lim_change, init_lim) = (0, lim)
     tau = 50 # Frequency of target network updates
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
     tot_steps = 0
-    trial = False
+    (trial,cleared_before) = (False,False)
     
     #reward_df = pd.DataFrame(columns = ["num_episodes","R_avg","n_examples"])
     episode_buffer = deque(maxlen=100) # queue of entire episodes
@@ -192,9 +197,10 @@ def train_loop(env, architect, builder, n_episodes,
 
         eps = max(eps * eps_decay, eps_end)
 
-        R_avg =  (1-architect.gamma) * ep_reward + (architect.gamma) * R_avg
+        p = 1/min(i+1,1000) # The proportion that the current episode should count towards R_avg
+        R_avg =  p * ep_reward + (1-p) * R_avg
         t = "a,b" if architect.training and builder.training else "a" if architect.training else "b" if builder.training else "none"
-        print('Episode: {:d}, Ex: {:.0f}, Steps:{: 4d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Trainee: {}, Cat: {}'.format(
+        print('Episode: {:d}, #Ex: {:.0f}, Steps:{: 4d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Trainee: {}, Cat: {}'.format(
                                                                                     i, n_examples, steps, ep_reward, R_avg, eps, t, architect.catalog))
         #reward_df = reward_df.append({"num_episodes" : i,"R_avg" : float(R_avg),"n_examples" : n_examples}, ignore_index = True)
 
@@ -203,6 +209,7 @@ def train_loop(env, architect, builder, n_episodes,
             trial = True
             architect.training = True#architect.training != True
             builder.training   = False#builder.training   != True
+            builder.learn_symbol()
             
         tot_steps += steps
 
@@ -210,7 +217,7 @@ def train_loop(env, architect, builder, n_episodes,
         if trial:
             cleared_examples = test_examples(n_examples, architect, builder, env, device, difficulty=difficulty)[0]
             # --- Record current performance ---
-            if i < 1000 or i % 1000 < 10 or cleared_examples:
+            if i < 1000 or i % 1000 < 50 or cleared_examples:
                 rewards = []
                 for _ in range(3):
                     with torch.no_grad():
@@ -218,21 +225,22 @@ def train_loop(env, architect, builder, n_episodes,
                 if os.path.isfile(f'{df_path}/rewards{n_examples}.csv'):
                     df = pd.read_csv(f'{df_path}/rewards{n_examples}.csv')
                 else:
-                    df = pd.DataFrame(columns = ["num_episodes","R_avg"])
-                df = df.append(pd.DataFrame([(i,np.mean(rewards))], columns = ["num_episodes","R_avg"]))
+                    df = pd.DataFrame(columns = ["num_episodes","R_avg_tot", "R_avg_curr"])
+                df = df.append(pd.DataFrame([(i,np.mean(rewards),R_avg)], columns = ["num_episodes","R_avg_tot", "R_avg_curr"]))
                 df.to_csv(f'{df_path}/rewards{n_examples}.csv', index=False)
             # ----------------------------------
             
             print("---------------------------------")
             if cleared_examples:
-                return R_avg, False
+                if cleared_before:
+                    return R_avg, False
+                cleared_before = True
             print("---------------------------------")
             # If fail, increase catalog size
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
             if random.randint(0,len(architect.catalog)) == 0:
                 abstraction = get_abstract(episode_buffer, env.size[0])
-                print(abstraction)
                 if len(abstraction) > 0:
                     abstraction = abstraction[0]
                     architect.increase_catalog(abstraction)

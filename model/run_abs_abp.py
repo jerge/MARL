@@ -45,7 +45,7 @@ suffix = "" if n_args <= 5 else sys.argv[5]
 testing = False if n_args <= 6 else bool(sys.argv[6])
 
 #------Sys args-----
-max_catalog_size = 32
+max_catalog_size = 0
 name=f"{env.size[0]}absmarl{difficulty}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
 architect   = Architect(num_states,               num_actions, 2, device, network_type, training = True, max_catalog_size = max_catalog_size)

@@ -120,7 +120,6 @@ def get_abstract(epochs, width):
     lcs = collections.Counter()
     print(sols)
     for i in range(len(sols)):
-        print(f"zzz{i}")
         for j in range(i, len(sols)):
             for x in findLCS(sols[i], sols[j], len(sols[i]), len(sols[j])):
                 lcs[x] += 1

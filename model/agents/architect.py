@@ -27,7 +27,8 @@ class Architect(Agent):
                                     network_type)
 
             
-            
+    def init(self):
+        pass
 
 
 

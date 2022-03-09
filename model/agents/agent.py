@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, Counter
 from dqn_model import ExperienceReplay
 from abc import ABC, abstractmethod
 import torch
@@ -24,11 +24,48 @@ class Agent(ABC):
         self.dqn = self.create_model(network_type)
 
         self.symbols = dict()
+        
+        self.init()
     
+    @abstractmethod
+    def init(self):
+        pass
     # Returns either the learnt symbolic actions for the input or
     # false if the symbol is not learnt
     def use_symbol(self, inp):
-        return self.symbols.get(tuple(inp.tolist()), False)
+        # print(self.symbols.get(tuple(inp[0].tolist()), False))
+        return self.symbols.get(tuple(inp[0].tolist()), None)
+
+
+    # Checks through the entire replay_buffer to see if a symbol has been properly learnt
+    def learn_symbol(self):
+        threshold = 0.95
+        # state -> Counter() :: action -> int
+        state_dict = dict()
+        # IS TRANSIOTON.S a proper key?
+        
+        batch_size = 10000
+        if self.replay_buffer.buffer_length < batch_size:
+            return
+        rb = self.replay_buffer.sample_minibatch(batch_size=batch_size)
+        for i in range(batch_size):
+            s = rb[0][i][0]
+            a = rb[1][i]
+            # Skip if already learnt
+            s = tuple(s.tolist())
+            a = int(a)#a.tolist())
+            if s in self.symbols.keys():
+                continue
+            if state_dict.get(s,None) == None:
+                state_dict[s] = Counter()
+            state_dict[s][a] += 1
+        for s, counter in state_dict.items():
+            total = sum(counter.values())
+            for a, amount in counter.items():
+                if amount / total > threshold:
+                    self.symbols[s] = a 
+                    print(f"Added {a} to symbol_list for state {s}")
+
 
     def to_primitives(self, sequence):
         # sequence :: String
@@ -48,6 +85,9 @@ class Agent(ABC):
         if not primitive_sequence in [c.tolist() for c in self.catalog]:
             self.catalog.append(torch.tensor(primitive_sequence))
 
+    def catalog_names(self):
+        action_list = ['Vert','Hori','Left','Right']
+        catalog_names = action_list + [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in self.catalog]]
     @abstractmethod
     def create_model(self, network_type):
         pass

@@ -1,7 +1,18 @@
-from collections import namedtuple, Counter
+from collections import namedtuple
 from agents import Agent
 from dqn_model import DeepQLearningModel
+import torch.nn.functional as F
+import torch
+import numpy as np
+
 class Builder(Agent):
+    def init(self):
+        # Initialize the symbol list for the 4 standard actions
+        standard_messages = [tuple(np.eye(self.num_actions + self.max_catalog_size, dtype=float)[i]) for i in range(self.num_actions)]
+        for i, message in enumerate(standard_messages):
+            self.symbols[message] = i
+        print(self.symbols.items())
+
     # GlobalTransition = namedtuple("GlobalTransition", ["s", "m", "a", "r", "t"])
     def get_reward(self,message,action):
         # 1 if correct, -2 if incorrect
@@ -30,30 +41,6 @@ class Builder(Agent):
                                     self.num_channels, 
                                     self.learning_rate, 
                                     network_type)
-
-    # Checks through the entire replay_buffer to see if a symbol has been properly learnt
-    def learn_symbol(self):
-        threshold = 0.95
-        # state -> Counter() :: action -> int
-        state_dict = dict()
-        # IS TRANSIOTON.S a proper key?
-        for transition in self.replay_buffer.sample_minibatch(batch_size=10000):
-            # Skip if already learnt
-            s = tuple(transition.s.tolist())
-            a = tuple(transition.a.tolist())
-            if s in self.symbols.keys():
-                continue
-            if state_dict[s] == None:
-                state_dict[s] = Counter()
-            state_dict[s][a] += 1
-        for s, counter in state_dict.items():
-            total = sum(counter.values())
-            for a, amount in counter.items():
-                if amount / total > threshold:
-                    self.symbols[s] = a 
-                    print(f"Added {a} to symbol_list for state {s}")
-
-
     
     def build(self, action, env):
         if int(action) >= env.action_space.n:
