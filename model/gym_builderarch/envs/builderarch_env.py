@@ -24,7 +24,7 @@ class BuilderArchEnv(gym.Env):
         self.prev_actions = deque(maxlen=int(self.size[0]))
 
     def set_goal(self, goal):
-        assert self.state.shape == goal.shape
+        assert self.state.shape == goal.shape, f"state: {self.state.shape}, goal: {goal.shape}"
         self.goal = goal
 
     def is_done(self):

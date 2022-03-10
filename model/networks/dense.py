@@ -11,19 +11,19 @@ class DenseNetwork(nn.Module):
         self._num_channels = num_channels
         # (Batch, Number Channels, height, width)
         self.layer1 = nn.Sequential(
-            nn.Linear(num_states * num_channels, num_states * 4),
+            nn.Linear(num_states * num_channels, num_states * 16),
             nn.ReLU())
         self.layer2 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
+            nn.Linear(num_states * 16, num_states * 16),
             nn.ReLU())
         self.layer3 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
+            nn.Linear(num_states * 16, num_states * 16),
             nn.ReLU())
         self.layer4 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
+            nn.Linear(num_states * 16, num_states * 16),
             nn.ReLU())
         self.layer5 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states),
+            nn.Linear(num_states * 16, num_states),
             nn.ReLU())
         self.layer6 = nn.Linear(num_states, num_actions)
 

@@ -180,21 +180,27 @@ def train_loop(env, architect, builder, n_episodes,
                 device, n_examples, difficulty,
                 batch_size = 512, lim = 9, df_path = "."):
     min_buffer_size = 100
-    (eps, eps_decay, eps_end) = (0.99, 0.999, 0.03)
+    (eps, eps_decay, eps_end) = (0.99, 0.9999, 0.03)
     (last_lim_change, init_lim) = (0, lim)
     tau = 50 # Frequency of target network updates
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
     tot_steps = 0
     (trial,cleared_before) = (False,False)
-    
+    high_eps_episode = False
     #reward_df = pd.DataFrame(columns = ["num_episodes","R_avg","n_examples"])
     episode_buffer = deque(maxlen=100) # queue of entire episodes
     for i in range(n_episodes):
-
+        if random.randint(0,10) == 0:
+            prev_eps = eps
+            eps = 0.9
+            high_eps_episode = True
         (steps, ep_reward) = wake(env, architect, builder, episode_buffer, 
                                     eps, eps_end, tau, batch_size, min_buffer_size, 
                                     device, n_examples, difficulty)
-
+        if high_eps_episode:
+            high_eps_episode = False
+            eps = prev_eps
+            continue
         eps = max(eps * eps_decay, eps_end)
 
         p = 1/min(i+1,1000) # The proportion that the current episode should count towards R_avg
@@ -221,7 +227,8 @@ def train_loop(env, architect, builder, n_episodes,
                 rewards = []
                 for _ in range(3):
                     with torch.no_grad():
-                        rewards = rewards + test_examples(30, architect, builder, env, device, difficulty = difficulty, eps = eps, evaluation = True)[1]
+                        # NOTE n = 7
+                        rewards = rewards + test_examples(7, architect, builder, env, device, difficulty = difficulty, eps = eps, evaluation = True)[1]
                 if os.path.isfile(f'{df_path}/rewards{n_examples}.csv'):
                     df = pd.read_csv(f'{df_path}/rewards{n_examples}.csv')
                 else:
