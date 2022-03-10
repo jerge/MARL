@@ -26,11 +26,10 @@ class Builder(Agent):
             prev_transition = transition_buffer[i-1]
             transition      = transition_buffer[i]
 
-
-            replay_transition = Transition( s       = prev_transition.m,
+            replay_transition = Transition( s       = F.one_hot(prev_transition.m,num_classes = self.num_states).float(),
                                             a       = prev_transition.a,
                                             r       = self.get_reward(prev_transition.m, prev_transition.a),
-                                            next_s  = transition.m,
+                                            next_s  = F.one_hot(transition.m,num_classes = self.num_states).float(),
                                             t       = transition.t)
             self.replay_buffer.add(replay_transition)
             

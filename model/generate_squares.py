@@ -6,6 +6,9 @@ import gym_builderarch
 import copy
 import numpy as np
 
+def tensor_to_tuple(tensor):
+    return tuple(tensor.tolist())
+
 env = gym.make('BuilderArch-v1')
 
 states = []
@@ -14,14 +17,14 @@ for n_blocks in range(1,10):
     max_amount = 10
     for x in range(max_amount):
         steps += 1 # Counter for the name
-        env.reset(n=2)
+        env.reset(n=1, difficulty = "template")
         env.state = torch.zeros(env.size)
         while int(torch.sum(env.get_state()[1])) // 2 < n_blocks:
             action = np.random.choice([0,1,2,3],p=[0.1,0.1,0.4,0.4])
             #action = env.action_space.sample()
-            env.step(action)
+            env.step(torch.tensor(action))
         st = torch.roll(env.get_state()[1],env.loc,1).long()
-        if st in states:
+        if tensor_to_tuple(st) in [tensor_to_tuple(state) for state in states]:
             continue
         else:
             states.append(st)

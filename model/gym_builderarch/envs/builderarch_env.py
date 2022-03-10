@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (7,7)
+        self.size = (5,5)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # v h l r
         self.invalid_action_punishment = torch.tensor(0.)

@@ -14,10 +14,31 @@ else:
     print('cpu')
     device = torch.device("cpu")
 
+# Network type, difficulty, ex_end, ex_start
+#------Sys args-----
+n_args = len(sys.argv)
+
+a_network_type = "dense" if n_args <= 1 else sys.argv[1]
+b_network_type = "smalldense" if n_args <= 2 else sys.argv[2]
+#assert "dense" in network_type, "Not dense network has not been implemented, note the state size of the dqn model"
+
+difficulty = "normal" if n_args <= 3 else sys.argv[3]
+
 # Create the environment
 env = gym.make('BuilderArch-v1')
-env.reset()
-enable_visualization = False
+env.reset(difficulty = difficulty)
+
+max_size = len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares"))
+end = max_size if n_args <= 4 else int(sys.argv[4])
+ex_end = min(end, max_size)
+
+ex_start = 0 if n_args <= 5 else int(sys.argv[5]) # Amount of examples deemed correct
+
+suffix = "" if n_args <= 6 else sys.argv[6]
+
+testing = False if n_args <= 7 else bool(sys.argv[7])
+
+#/-----Sys args----\
 
 # Initializations
 actions = env.action_space
@@ -26,30 +47,11 @@ num_states = env.size
 
 num_episodes = 300000000
 
-# Network type, difficulty, ex_end, ex_start
-#------Sys args-----
-n_args = len(sys.argv)
-network_type = "dense" if n_args <= 1 else sys.argv[1]
-assert "dense" in network_type, "Not dense network has not been implemented, note the state size of the dqn model"
-
-difficulty = "normal" if n_args <= 2 else sys.argv[2]
-
-max_size = len(env.get_examples(filename=f"{difficulty}{env.size[0]}.squares"))
-end = max_size if n_args <= 3 else int(sys.argv[3])
-ex_end = min(end, max_size)
-
-ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed correct
-
-suffix = "" if n_args <= 5 else sys.argv[5]
-
-testing = False if n_args <= 6 else bool(sys.argv[6])
-
-#------Sys args-----
 max_catalog_size = 2
 name=f"{env.size[0]}absmarl{difficulty}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
-architect   = Architect(num_states,               num_actions, 2, device, network_type, training = True, max_catalog_size = max_catalog_size)
-builder     = Builder(architect.dqn._num_actions, num_actions, 1, device, "small" + network_type, training = False, max_catalog_size = max_catalog_size)
+architect   = Architect(num_states,               num_actions, 2, device, a_network_type, training = True, max_catalog_size = max_catalog_size)
+builder     = Builder(architect.dqn._num_actions, num_actions, 1, device, b_network_type, training = False, max_catalog_size = max_catalog_size)
 
 path = f"./model_checkpoints/{name}"
 if not os.path.exists(path):

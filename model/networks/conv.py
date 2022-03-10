@@ -9,33 +9,37 @@ class ConvNetwork(nn.Module):
         self._num_actions = num_actions
         self._num_channels = num_channels
         # (Batch, Number Channels, height, width)
-        keep_prob = 1
-        out_channels = 2
+        keep_prob = .9
+        out_channels = 32
         self.layer1 = nn.Sequential(
             nn.Conv2d(self._num_channels,out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'), #num_states[0], num_states[1]
             nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
             #nn.MaxPool2d(kernel_size=2, stride=1),
             nn.Dropout(p=1 - keep_prob))
         self.layer2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
             nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
             # nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
         self.layer3 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
             nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
             # nn.MaxPool2d(kernel_size=2, out_channels, out_channels, kernel_size=3, stride=1, padding=1),#, padding_mode='circular'),
             nn.Dropout(p=1 - keep_prob))
         self.layer4 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, padding_mode='circular'),
             nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
             #nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=1 - keep_prob))
         self.layer5 = nn.Sequential(
-            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1]*100),
+            nn.Linear(num_states[0] * num_states[1] * out_channels, num_states[0] * num_states[1]),
             nn.ReLU()
         )
-        self.layer6 = nn.Linear(num_states[0] * num_states[1] * 100, num_actions)
+        self.layer6 = nn.Linear(num_states[0] * num_states[1], num_actions)
 
     def forward(self, state):
         h = state

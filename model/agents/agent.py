@@ -8,7 +8,7 @@ class Agent(ABC):
 
     def __init__(self, num_states, num_actions, num_channels, device, network_type, 
                     catalog = [], max_catalog_size = 0, gamma = 0.95, learning_rate = 1e-4, training = False):
-        self.num_states = num_states if type(num_states) == int else num_states[0] * num_states[1]
+        self.num_states = num_states if type(num_states) == int or "conv" in network_type else num_states[0] * num_states[1]
         self.num_actions = num_actions
         self.num_channels = num_channels
         self.device = device
@@ -30,10 +30,10 @@ class Agent(ABC):
     @abstractmethod
     def init(self):
         pass
+
     # Returns either the learnt symbolic actions for the input or
     # false if the symbol is not learnt
     def use_symbol(self, inp):
-        # print(self.symbols.get(tuple(inp[0].tolist()), False))
         return self.symbols.get(tuple(inp[0].tolist()), None)
 
 
@@ -42,7 +42,6 @@ class Agent(ABC):
         threshold = 0.95
         # state -> Counter() :: action -> int
         state_dict = dict()
-        # IS TRANSIOTON.S a proper key?
         
         batch_size = 10000
         if self.replay_buffer.buffer_length < batch_size:
@@ -56,7 +55,7 @@ class Agent(ABC):
             a = int(a)#a.tolist())
             if s in self.symbols.keys():
                 continue
-            if state_dict.get(s,None) == None:
+            elif state_dict.get(s,None) == None:
                 state_dict[s] = Counter()
             state_dict[s][a] += 1
         for s, counter in state_dict.items():

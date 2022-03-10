@@ -22,7 +22,7 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
     #r_threshold = 0
     rewards = []
     for i in range(n_examples):
-        env.reset()
+        env.reset(difficulty = difficulty)
         # Get the i:th example and set it as goal
         ex = env.get_examples(filename=f"{difficulty}{env.size[0]}.squares")[i][1]
         env.set_goal(ex)
@@ -164,7 +164,9 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
     episode_history.append(GlobalTransition(s=new_state, m = None, a = None, r = None, t = None))
     
     # Add the episode to the replay buffers
-    architect.append_buffer(episode_history)
+    # Do not let the architect's training depend on a training builder
+    if not builder.training:
+        architect.append_buffer(episode_history)
     builder.append_buffer(episode_history)
     
     # Add the episode, if successful, to the episode buffer for later abstraction
@@ -206,21 +208,24 @@ def train_loop(env, architect, builder, n_episodes,
         p = 1/min(i+1,1000) # The proportion that the current episode should count towards R_avg
         R_avg =  p * ep_reward + (1-p) * R_avg
         t = "a,b" if architect.training and builder.training else "a" if architect.training else "b" if builder.training else "none"
-        print('Episode: {:d}, #Ex: {:.0f}, Steps:{: 4d}, Total Reward (running avg): {:4.0f} ({:.2f}) Epsilon: {:.3f}, Trainee: {}, Cat: {}'.format(
-                                                                                    i, n_examples, steps, ep_reward, R_avg, eps, t, architect.catalog))
+        print('Episode: {:d}, #Ex: {:.0f}, Steps: {: 3d}, Ep Reward (running avg): {:4.0f} ({:.2f}) Eps: {:.3f}, Trainee: {}, Cat: {}, #Symb: {}'.format(
+                                                                                    i, n_examples, steps, ep_reward, R_avg, eps, t, 
+                                                                                    architect.catalog, len(builder.symbols.keys())))
         #reward_df = reward_df.append({"num_episodes" : i,"R_avg" : float(R_avg),"n_examples" : n_examples}, ignore_index = True)
 
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
             trial = True
-            architect.training = True#architect.training != True
-            builder.training   = False#builder.training   != True
+            architect.training = architect.training != True
+            builder.training   = builder.training   != True
             builder.learn_symbol()
             
         tot_steps += steps
 
         #if R_avg > lim/(lim+1):
         if trial:
+            print("Learnt symbols:")
+            print(builder.symbols.items())
             cleared_examples = test_examples(n_examples, architect, builder, env, device, difficulty=difficulty)[0]
             # --- Record current performance ---
             if i < 1000 or i % 1000 < 50 or cleared_examples:
