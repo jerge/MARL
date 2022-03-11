@@ -17,6 +17,7 @@ class BuilderArchEnv(gym.Env):
         self.size = (5,5)
         self.loc = 0
         self.action_space = spaces.Discrete(4) # v h l r
+        self.grouped_action_space = spaces.MultiDiscrete((2,self.size[0])) # ([v,h],loc)
         self.invalid_action_punishment = torch.tensor(0.)
         self.state = None
         self.steps = 0
@@ -39,7 +40,8 @@ class BuilderArchEnv(gym.Env):
     def step(self, action):
         self.steps += 1
         prev_state = copy.deepcopy(self.state)
-        allowed = self.take_action(action)
+        #allowed = self.take_action(action)
+        allowed = self.take_grouped_action(action)
 
         done = self.is_done()
         
@@ -81,6 +83,33 @@ class BuilderArchEnv(gym.Env):
         # ob = torch.stack((self.goal, st))
         return ob
     
+    # Returns true if the action was allowed and mutates the state if it was allowed
+    def take_grouped_action(self, action):
+        action = int(action)
+        top_locations = [x.shape[0] if torch.max(x) == 0 else torch.argmax(x) for x in self.state.T]
+
+        loc = action % self.grouped_action_space[1].n
+        # Vertical block
+        if action // self.grouped_action_space[1].n == 0:
+            top = top_locations[loc]
+
+            if top <= 1:
+                return False
+            self.state[top-2,loc] = 1
+            self.state[top-1,loc] = 1
+        # Horisontal block
+        elif action // self.grouped_action_space[1].n == 1:
+            top = min(top_locations[loc],top_locations[(loc+1) % self.size[1]])
+            if not (top > 0):
+                return False
+            self.state[top-1, loc] = 1
+            #print(self.state)
+            self.state[top-1, (loc+1) % self.size[1]] = 1
+        # print(self.state)
+        # print(action)
+        return True
+
+
     # Returns true if the action was allowed and mutates the state if it was allowed
     def take_action(self, action):
         if len(action.size()) != 0:

@@ -42,7 +42,7 @@ class Builder(Agent):
                                     network_type)
     
     def build(self, action, env):
-        if int(action) >= env.action_space.n:
+        if int(action) >= self.num_actions:
             action = self.catalog[int(action-env.action_space.n)]
         new_state, env_reward, done, success = env.step(action)
         return (new_state, env_reward, done, success)

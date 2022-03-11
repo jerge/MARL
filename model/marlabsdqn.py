@@ -216,8 +216,8 @@ def train_loop(env, architect, builder, n_episodes,
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
             trial = True
-            architect.training = architect.training != True
-            builder.training   = builder.training   != True
+            #architect.training = architect.training != True
+            #builder.training   = builder.training   != True
             builder.learn_symbol()
             
         tot_steps += steps

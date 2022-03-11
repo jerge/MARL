@@ -40,17 +40,19 @@ testing = False if n_args <= 7 else bool(sys.argv[7])
 #/-----Sys args----\
 
 # Initializations
-actions = env.action_space
-num_actions = actions.n
+# actions = env.action_space
+# num_actions = actions.n
+grouped_actions = env.grouped_action_space
+num_actions = grouped_actions[0].n * grouped_actions[1].n
 num_states = env.size
 
 num_episodes = 300000000
 
-max_catalog_size = 2
+max_catalog_size = 0
 name=f"{env.size[0]}{a_network_type[:3]}{b_network_type[:3]}{difficulty[:3]}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
 architect   = Architect(num_states,               num_actions, 2, device, a_network_type, training = True, max_catalog_size = max_catalog_size)
-builder     = Builder(architect.dqn._num_actions, num_actions, 1, device, b_network_type, training = False, max_catalog_size = max_catalog_size)
+builder     = Builder(int(architect.dqn._num_actions), num_actions, 1, device, b_network_type, training = False, max_catalog_size = max_catalog_size)
 
 path = f"./model_checkpoints/{name}"
 if not os.path.exists(path):

@@ -34,7 +34,8 @@ class Agent(ABC):
     # Returns either the learnt symbolic actions for the input or
     # false if the symbol is not learnt
     def use_symbol(self, inp):
-        return self.symbols.get(tuple(inp[0].tolist()), None)
+        x = self.symbols.get(tuple(inp[0].tolist()), None)
+        return x
 
 
     # Checks through the entire replay_buffer to see if a symbol has been properly learnt
