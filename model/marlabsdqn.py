@@ -180,7 +180,7 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
 
 def train_loop(env, architect, builder, n_episodes, 
                 device, n_examples, difficulty,
-                batch_size = 512, lim = 9, df_path = "."):
+                batch_size = 512, lim = 9, df_path = ".", n_plot_examples = 1):
     min_buffer_size = 100
     (eps, eps_decay, eps_end) = (0.99, 0.9999, 0.03)
     (last_lim_change, init_lim) = (0, lim)
@@ -189,7 +189,7 @@ def train_loop(env, architect, builder, n_episodes,
     tot_steps = 0
     (trial,cleared_before) = (False,False)
     high_eps_episode = False
-    #reward_df = pd.DataFrame(columns = ["num_episodes","R_avg","n_examples"])
+
     episode_buffer = deque(maxlen=100) # queue of entire episodes
     for i in range(n_episodes):
         if random.randint(0,10) == 0:
@@ -233,7 +233,7 @@ def train_loop(env, architect, builder, n_episodes,
                 for _ in range(3):
                     with torch.no_grad():
                         # NOTE n = 7
-                        rewards = rewards + test_examples(7, architect, builder, env, device, difficulty = difficulty, eps = eps, evaluation = True)[1]
+                        rewards = rewards + test_examples(n_plot_examples, architect, builder, env, device, difficulty = difficulty, eps = eps, evaluation = True)[1]
                 if os.path.isfile(f'{df_path}/rewards{n_examples}.csv'):
                     df = pd.read_csv(f'{df_path}/rewards{n_examples}.csv')
                 else:

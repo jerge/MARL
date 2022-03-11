@@ -20,7 +20,6 @@ n_args = len(sys.argv)
 
 a_network_type = "dense" if n_args <= 1 else sys.argv[1]
 b_network_type = "smalldense" if n_args <= 2 else sys.argv[2]
-#assert "dense" in network_type, "Not dense network has not been implemented, note the state size of the dqn model"
 
 difficulty = "normal" if n_args <= 3 else sys.argv[3]
 
@@ -48,7 +47,7 @@ num_states = env.size
 num_episodes = 300000000
 
 max_catalog_size = 2
-name=f"{env.size[0]}absmarl{difficulty}{max_catalog_size}"
+name=f"{env.size[0]}{a_network_type[:3]}{b_network_type[:3]}{difficulty[:3]}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
 architect   = Architect(num_states,               num_actions, 2, device, a_network_type, training = True, max_catalog_size = max_catalog_size)
 builder     = Builder(architect.dqn._num_actions, num_actions, 1, device, b_network_type, training = False, max_catalog_size = max_catalog_size)
@@ -81,7 +80,7 @@ for i in range(ex_start, ex_end):
     # Train
     try:
         R_avg, timed_out = train_loop(env, architect, builder, num_episodes,
-                                            device, i+1, difficulty, df_path = path)
+                                            device, i+1, difficulty, df_path = path, n_plot_examples = ex_end)
         if timed_out:
             torch.save(architect.dqn.online_model.state_dict(), f"{path}/a{i+1}_unsuc.saved")
             torch.save(builder.dqn.online_model.state_dict(), f"{path}/b{i+1}_unsuc.saved")
