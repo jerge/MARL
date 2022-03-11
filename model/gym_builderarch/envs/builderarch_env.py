@@ -75,10 +75,10 @@ class BuilderArchEnv(gym.Env):
         return False
 
     def get_state(self):
-        #ob = torch.stack((torch.roll(self.goal,-self.loc,1), torch.roll(self.state,-self.loc,1)))
-        st = copy.deepcopy(self.state)
-        st[0][self.loc] -= 1
-        ob = torch.stack((self.goal, st))
+        ob = torch.stack((torch.roll(self.goal,-self.loc,1), torch.roll(self.state,-self.loc,1)))
+        # st = copy.deepcopy(self.state)
+        # st[0][self.loc] -= 1
+        # ob = torch.stack((self.goal, st))
         return ob
     
     # Returns true if the action was allowed and mutates the state if it was allowed

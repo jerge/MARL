@@ -143,7 +143,7 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
         # B: Generate action from message
         if builder.training:
             with torch.no_grad():
-                q, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, symbolic = True) # eps
+                _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, symbolic = True) # eps
         else:
             with torch.no_grad():
                 _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device, symbolic = True)
