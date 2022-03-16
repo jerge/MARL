@@ -7,8 +7,9 @@ class Agent(ABC):
     GlobalTransition = namedtuple("GlobalTransition", ["s", "m", "a", "r", "t"])
 
     def __init__(self, num_states, num_actions, num_channels, device, network_type, 
-                    catalog = [], max_catalog_size = 0, gamma = 0.95, learning_rate = 1e-4, training = False):
+                    catalog = [], max_catalog_size = 0, gamma = 0.95, learning_rate = 1e-4, training = False, grouped = False):
         self.num_states = num_states if type(num_states) == int or "conv" in network_type else num_states[0] * num_states[1]
+        self.grouped = grouped
         self.num_actions = num_actions
         self.num_channels = num_channels
         self.device = device
@@ -31,8 +32,23 @@ class Agent(ABC):
     def init(self):
         pass
 
+    # Returns the number of currently available acitons
+    def available_actions(self):
+        if self.grouped:
+            return (2+len(self.catalog)) * (self.num_actions // 2)
+        else:
+            return self.num_actions + len(self.catalog)
+
+    # Returns the number of possibly available actions
+    def max_actions(self):
+        if self.grouped:
+            return (2+self.max_catalog_size) * (self.num_actions // 2)
+        else:
+            return self.num_actions + self.max_catalog_size
+
+
     # Returns either the learnt symbolic actions for the input or
-    # false if the symbol is not learnt
+    # False if the symbol is not learnt
     def use_symbol(self, inp):
         x = self.symbols.get(tuple(inp[0].tolist()), None)
         return x
@@ -66,7 +82,7 @@ class Agent(ABC):
                     self.symbols[s] = a 
                     print(f"Added {a} to symbol_list for state {s}")
 
-
+    # TODO: fixe grouped
     def to_primitives(self, sequence):
         # sequence :: String
         primitive_sequence = []
@@ -85,9 +101,11 @@ class Agent(ABC):
         if not primitive_sequence in [c.tolist() for c in self.catalog]:
             self.catalog.append(torch.tensor(primitive_sequence))
 
-    def catalog_names(self):
+    def catalog_names(self, grouped = False):
+        assert not grouped, "grouped not implemented"
         action_list = ['Vert','Hori','Left','Right']
         catalog_names = action_list + [",".join([action_list[item][0] for item in itemlist]) for itemlist in [items.tolist() for items in self.catalog]]
+    
     @abstractmethod
     def create_model(self, network_type):
         pass

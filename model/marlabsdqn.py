@@ -38,12 +38,12 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
                 env.render()
             # A: Generate message from state
             q_a, message_one_hot = calc_q_and_take_action(architect, state, eps, device)
-            message = torch.argmax(message_one_hot[:architect.num_actions + len(architect.catalog)])
+            message = torch.argmax(message_one_hot[:architect.available_actions()])
             message_one_hot = message_one_hot[None,:]
             
             # B: Generate action from message
             q_b, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False, symbolic = True) # eps
-            action = torch.argmax(action_one_hot[:builder.num_actions + len(builder.catalog)])
+            action = torch.argmax(action_one_hot[:builder.available_actions()])
             action_one_hot = action_one_hot[None,:]
             #action = message # TODO TEMP
             # Env: Take action
@@ -83,11 +83,11 @@ def calc_q_and_take_action(agent, state, eps, device, debug = False, symbolic = 
     if symbolic:
         sym = agent.use_symbol(state)
         if sym != None:
-            return {}, F.one_hot(torch.tensor(sym), num_classes = agent.num_actions + agent.max_catalog_size).float()
+            return {}, F.one_hot(torch.tensor(sym), num_classes = agent.max_actions()).float()
 
     q_online_curr = agent.dqn.online_model(state.to(device=device)).cpu()
     # Crop the maximum to not allow actions outside the current catalog
-    action_i = torch.tensor(eps_greedy_policy(q_online_curr[0][:agent.num_actions + len(agent.catalog)][None,:], eps))
+    action_i = torch.tensor(eps_greedy_policy(q_online_curr[0][:agent.available_actions()][None,:], eps))
     if debug:
         print(q_online_curr)
     return q_online_curr, F.one_hot(action_i,num_classes = q_online_curr.shape[1]).float()
@@ -129,7 +129,6 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
     while not done:
         steps += 1
         state = env.get_state()[None,:]
-
         # A: Generate message from state
         if architect.training:
             with torch.no_grad():
@@ -182,7 +181,7 @@ def train_loop(env, architect, builder, n_episodes,
                 device, n_examples, difficulty,
                 batch_size = 512, lim = 9, df_path = ".", n_plot_examples = 1):
     min_buffer_size = 100
-    (eps, eps_decay, eps_end) = (0.99, 0.9999, 0.03)
+    (eps, eps_decay, eps_end) = (0.99, 0.999, 0.03)
     (last_lim_change, init_lim) = (0, lim)
     tau = 50 # Frequency of target network updates
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
@@ -208,7 +207,8 @@ def train_loop(env, architect, builder, n_episodes,
         p = 1/min(i+1,1000) # The proportion that the current episode should count towards R_avg
         R_avg =  p * ep_reward + (1-p) * R_avg
         t = "a,b" if architect.training and builder.training else "a" if architect.training else "b" if builder.training else "none"
-        print('Episode: {:d}, #Ex: {:.0f}, Steps: {: 3d}, Ep Reward (running avg): {:4.0f} ({:.2f}) Eps: {:.3f}, Trainee: {}, Cat: {}, #Symb: {}'.format(
+        if i % 50 == 0:
+            print('Episode: {:d}, #Ex: {:.0f}, Steps: {: 3d}, Ep Reward (running avg): {:4.0f} ({:.2f}) Eps: {:.3f}, Trainee: {}, Cat: {}, #Symb: {}'.format(
                                                                                     i, n_examples, steps, ep_reward, R_avg, eps, t, 
                                                                                     architect.catalog, len(builder.symbols.keys())))
         #reward_df = reward_df.append({"num_episodes" : i,"R_avg" : float(R_avg),"n_examples" : n_examples}, ignore_index = True)
@@ -251,8 +251,8 @@ def train_loop(env, architect, builder, n_episodes,
             # If fail, increase catalog size
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
-            if random.randint(0,len(architect.catalog)) == 0:
-                abstraction = get_abstract(episode_buffer, env.size[0])
+            if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
+                abstraction = get_abstract(episode_buffer, env.size[0], grouped = env.grouped)
                 if len(abstraction) > 0:
                     abstraction = abstraction[0]
                     architect.increase_catalog(abstraction)

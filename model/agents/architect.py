@@ -21,7 +21,7 @@ class Architect(Agent):
     def create_model(self, network_type):
         return DeepQLearningModel(self.device, 
                                     self.num_states, 
-                                    self.num_actions + self.max_catalog_size, 
+                                    self.max_actions(), 
                                     self.num_channels, 
                                     self.learning_rate, 
                                     network_type)

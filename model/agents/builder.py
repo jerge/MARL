@@ -7,8 +7,10 @@ import numpy as np
 
 class Builder(Agent):
     def init(self):
-        # Initialize the symbol list for the 4 standard actions
-        standard_messages = [tuple(np.eye(self.num_actions + self.max_catalog_size, dtype=float)[i]) for i in range(self.num_actions)]
+        # NOTE: Make the catalog actions non-symbolic
+        standard_messages = [tuple(np.eye(self.max_actions(), dtype=float)[i]) for i in \
+                                                            range(self.max_actions())]
+        #standard_messages = [tuple(np.eye(self.num_actions + self.max_catalog_size, dtype=float)[i]) for i in range(self.num_actions)]
         for i, message in enumerate(standard_messages):
             self.symbols[message] = i
         print(self.symbols.items())
@@ -36,14 +38,23 @@ class Builder(Agent):
     def create_model(self, network_type):
         return DeepQLearningModel(self.device, 
                                     self.num_states, 
-                                    self.num_actions + self.max_catalog_size, 
+                                    self.max_actions(), 
                                     self.num_channels, 
                                     self.learning_rate, 
                                     network_type)
     
     def build(self, action, env):
-        if int(action) >= self.num_actions:
-            action = self.catalog[int(action-env.action_space.n)]
+        # Formalize action for the environment depending on if using grouped or not
+        if self.grouped:
+            loc = action % (self.num_actions // 2)
+            block = action // (self.num_actions // 2)
+            # 2 standard blocks
+            if block >= 2:
+                block = self.catalog[block - 2]
+            action = (block,loc)
+        else:
+            if int(action) >= self.num_actions:
+                action = self.catalog[int(action-self.num_actions)]
         new_state, env_reward, done, success = env.step(action)
         return (new_state, env_reward, done, success)
 

@@ -53,7 +53,7 @@ ex_start = 0 if n_args <= 4 else int(sys.argv[4]) # Amount of examples deemed co
 
 name=f"{env.size[0]}{difficulty}cc"
 # TODO: make it work for not dense
-assert network_type == "dense", "non-dense netowrk is not implemented"
+assert network_type == "dense", "non-dense network is not implemented"
 dqn = DeepQLearningModel(device, num_states[0] * num_states[1], num_actions + len(catalog), num_channels, learning_rate, network_type)
 
 # dqn.online_model.load_state_dict(torch.load(f"./model_checkpoints/{name}{ex_start}_interrupted.saved"))
