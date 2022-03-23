@@ -23,6 +23,47 @@ class ExperienceReplay:
         '''
         self.__buffer.append(transition)
 
+    def sample_latest(self, batch_size=128):
+        if type(self._num_states) == int:
+            state_batch = torch.zeros([batch_size,self._input_channels, self._num_states],
+                               dtype=torch.float)
+        else:
+            state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
+                               dtype=torch.float)
+        action_batch = torch.zeros([
+            batch_size,
+        ], dtype=torch.long)
+        reward_batch = torch.zeros([
+            batch_size,
+        ], dtype=torch.float)
+        nonterminal_batch = torch.zeros([
+            batch_size,
+        ], dtype=torch.bool)
+
+        if type(self._num_states) == int:
+            next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states],
+                               dtype=torch.float)
+        else:
+            next_state_batch = torch.zeros([batch_size,self._input_channels, self._num_states[0], self._num_states[1]],
+                                    dtype=torch.float)
+
+        
+        for i in range(batch_size):
+            index = -i
+            state_batch[i, :] = self.__buffer[index].s
+            action_batch[i] = self.__buffer[index].a
+            reward_batch[i] = self.__buffer[index].r
+            nonterminal_batch[i] = self.__buffer[index].t
+            next_state_batch[i, :] = self.__buffer[index].next_s
+
+        return (
+            state_batch,
+            action_batch,
+            reward_batch,
+            next_state_batch,
+            nonterminal_batch
+        )
+    
     def sample_minibatch(self, batch_size=128):
         '''
         :param batch_size:
@@ -106,6 +147,13 @@ class DeepQLearningModel(object):
             self.offline_model = networks.DenseNoiseNetwork(self._num_states, 
                                       self._num_actions,
                                       self._num_channels).to(device=self._device)
+        elif network_type.lower() == "bigdense":
+            self.online_model = networks.BigDenseNetwork(self._num_states,
+                                     self._num_actions,
+                                     self._num_channels).to(device=self._device)
+            self.offline_model = networks.BigDenseNetwork(self._num_states,
+                                     self._num_actions,
+                                     self._num_channels).to(device=self._device)
         elif network_type.lower() == "conv" or network_type.lower() == "convolutional":
             self.online_model = networks.ConvNetwork(self._num_states,
                                      self._num_actions,

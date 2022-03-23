@@ -176,3 +176,44 @@ class SmallDenseNoiseNetwork(nn.Module):
         h = self.layer3(h)
         q_values = h
         return q_values
+
+# [Goal,State] -> num_actions
+class BigDenseNetwork(nn.Module):
+    def __init__(self, num_states, num_actions, num_channels):
+        super().__init__()
+        self._num_states = num_states
+        self._num_actions = num_actions
+        self._num_channels = num_channels
+        # (Batch, Number Channels, height, width)
+        self.layer1 = nn.Sequential(
+            nn.Linear(num_states * num_channels, num_states * 16),
+            nn.ReLU())
+        self.layer2 = nn.Sequential(
+            nn.Linear(num_states * 16, num_states * 256),
+            nn.ReLU())
+        self.layer3 = nn.Sequential(
+            nn.Linear(num_states * 256, num_states * 512),
+            nn.ReLU())
+        self.layer4 = nn.Sequential(
+            nn.Linear(num_states * 512, num_states * 64),
+            nn.ReLU())
+        self.layer5 = nn.Sequential(
+            nn.Linear(num_states * 64, num_states * 8),
+            nn.ReLU())
+        self.layer6 = nn.Sequential(
+            nn.Linear(num_states * 8, num_states * 1),
+            nn.ReLU())
+        self.layer7 = nn.Linear(num_states, num_actions)
+
+    def forward(self, state):
+        h = state
+        h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
+        h = self.layer1(h)
+        h = self.layer2(h)
+        h = self.layer3(h)
+        h = self.layer4(h)
+        h = self.layer5(h)
+        h = self.layer6(h)
+        h = self.layer7(h)
+        q_values = h
+        return q_values

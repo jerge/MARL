@@ -58,7 +58,7 @@ def findLCS(x, y, m, n):
 def decide_abstraction(lcs,n):
     # Currently just taking n most common words
     print(lcs)
-    lengths = [word.count('0') + word.count('1') for (word,count) in lcs.most_common()]
+    lengths = [word.count('0') + word.count('1') + word.count('2') for (word,count) in lcs.most_common()]
     counts = [count for (word,count) in lcs.most_common()]
     print(lengths)
     print(counts)
@@ -67,7 +67,7 @@ def decide_abstraction(lcs,n):
     
     values = [c - p(l) if l > 1 else 1 for (c,l) in zip(counts,lengths)]
     print(values)
-    plot_c_l(counts,lengths)
+    #plot_c_l(counts,lengths)
     best_index = np.argmax(values)
     word = [word for word, count in lcs.most_common()][best_index]
     if lengths[best_index] <= 1:
@@ -160,3 +160,16 @@ def get_abstract(epochs, width, grouped = False):
 #[v0,v1,v2,h1,h2,h3]
 #transition = "012020102012121210201020102"
 #print(ungroup_transition(transition, 3))
+
+def find_bad_abstractions(actions, epsilon, num_std_blocks, num_actions, catalog_size, grouped = True):
+    assert grouped, "Ungrouped is not implemented"
+    width = num_actions // num_std_blocks
+    catalog_actions = [action // width for action in actions if action >= num_actions]
+    unique, counts = np.unique(catalog_actions, return_counts=True)
+    uses = dict(zip(unique, counts))
+    # Bad abstraction if you are used fewer times than random exploration
+    count_threshold = int(epsilon * len(actions) * 1/(catalog_size + num_std_blocks))
+    print(count_threshold)
+    print(uses)
+
+    return [act for act in unique if uses[act] < count_threshold and catalog_size > act - num_std_blocks]

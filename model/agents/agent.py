@@ -11,6 +11,7 @@ class Agent(ABC):
         self.num_states = num_states if type(num_states) == int or "conv" in network_type else num_states[0] * num_states[1]
         self.grouped = grouped
         self.num_actions = num_actions
+        self.num_std_blocks = 2
         self.num_channels = num_channels
         self.device = device
         self.training = training
@@ -35,14 +36,14 @@ class Agent(ABC):
     # Returns the number of currently available acitons
     def available_actions(self):
         if self.grouped:
-            return (2+len(self.catalog)) * (self.num_actions // 2)
+            return (self.num_std_blocks+len(self.catalog)) * (self.num_actions // self.num_std_blocks)
         else:
             return self.num_actions + len(self.catalog)
 
     # Returns the number of possibly available actions
     def max_actions(self):
         if self.grouped:
-            return (2+self.max_catalog_size) * (self.num_actions // 2)
+            return (self.num_std_blocks+self.max_catalog_size) * (self.num_actions // self.num_std_blocks)
         else:
             return self.num_actions + self.max_catalog_size
 

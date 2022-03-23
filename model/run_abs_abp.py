@@ -48,7 +48,7 @@ num_states = env.size
 
 num_episodes = 300000000
 
-max_catalog_size = 3
+max_catalog_size = 4
 name=f"{env.size[0]}{a_network_type[:3]}{b_network_type[:3]}{difficulty[:3]}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
 architect   = Architect(num_states,                    num_actions, 2, device, a_network_type, training = True, max_catalog_size = max_catalog_size, grouped = True)

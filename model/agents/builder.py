@@ -46,11 +46,11 @@ class Builder(Agent):
     def build(self, action, env):
         # Formalize action for the environment depending on if using grouped or not
         if self.grouped:
-            loc = action % (self.num_actions // 2)
-            block = action // (self.num_actions // 2)
-            # 2 standard blocks
-            if block >= 2:
-                block = self.catalog[block - 2]
+            loc = action % (self.num_actions // self.num_std_blocks)
+            block = action // (self.num_actions // self.num_std_blocks)
+            # num_blocks standard blocks
+            if block >= self.num_std_blocks:
+                block = self.catalog[block - self.num_std_blocks]
             action = (block,loc)
         else:
             if int(action) >= self.num_actions:

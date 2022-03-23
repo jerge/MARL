@@ -53,6 +53,8 @@ class BuilderArchEnv(gym.Env):
         self.prev_actions.append(action)
         # (reward, success) = self.get_reward(done) if allowed else (self.invalid_action_punishment, False)
         (reward, success) = self.get_reward_2(prev_state, done) if allowed else (self.invalid_action_punishment, False)
+        # (reward, success) = self.get_reward_4(prev_state, done) if allowed else (self.invalid_action_punishment, False)
+        # (reward, success) = self.get_reward_5(done) if allowed else (self.invalid_action_punishment, False)
 
         ob = self.get_state()
         return ob, reward, done, success
@@ -62,10 +64,11 @@ class BuilderArchEnv(gym.Env):
         self.loc = 0
         self.steps = 0
         # Examples are of form (name,grid)
-        if random.randint(0,3) == 0:
-            ex = self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[n][1]
+        examples = self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[:n]
+        if random.randint(0,3) == 0: # Extra chance to pick the last one
+            ex = examples[-1][1]
         else:
-            ex = random.choice(self.get_examples(filename=f"{difficulty}{self.size[0]}.squares")[:n])[1]
+            ex = random.choice(examples)[1]
         self.set_goal(ex)
         return self.get_state()
 
@@ -79,6 +82,13 @@ class BuilderArchEnv(gym.Env):
         print(" "*(3*self.loc+1) + "\N{WHITE DOWN POINTING BACKHAND INDEX}")
         for row in state.long().tolist():
             print(str(row).replace('0',"."))
+        return False
+    
+    def render_state_with_goal(self, state, goal):
+        print(" "*(3*self.loc+1) + "\N{WHITE DOWN POINTING BACKHAND INDEX}")
+        sep = 9 # needs to be a value not naturally occuring
+        for row in (torch.cat((state,torch.ones((state.shape[0],1))*sep,goal), axis = 1)).long().tolist():
+            print(str(row).replace('0',".").replace(f'{sep}','|'))
         return False
 
     def get_state(self):
@@ -161,7 +171,7 @@ class BuilderArchEnv(gym.Env):
     # Also returns if the construct was perfect
     def get_reward(self, done):
         if self.goal is None:
-            return torch.tensor(0.)
+            return (torch.tensor(0.), False)
         if done:
             if torch.equal(self.goal, self.state.long()):
                 return (torch.tensor(1.) * (0.90**self.steps), True)
@@ -171,14 +181,35 @@ class BuilderArchEnv(gym.Env):
     # placed in a potentially correct spot
     def get_reward_2(self, prev_state, done):
         (reward, success) = self.get_reward(done)
-        if torch.sum(self.state-prev_state) == 2:
-            reward += 0.1 * (1/(torch.sum(self.goal)//2)) * (0.90 ** self.steps)
+        diff_state = self.state-prev_state
+        if not -1 in diff_state:
+            reward += 0.1 * (1/(torch.sum(self.goal))) * (0.90 ** self.steps) * (torch.sum(diff_state))
         return (reward, success)
 
     def get_reward_3(self, done):
         (reward, success) = self.get_reward(done)
         return (reward * (torch.sum(self.goal)//2), success)
 
+    # Same as get_reward_2 but gives negative rewards for failure
+    def get_reward_4(self, prev_state, done):
+        (reward, success) = self.get_reward(done)
+        if done and not success:
+            reward -= torch.tensor(1.) * (0.90**self.steps)
+        diff_state = self.state-prev_state
+        if not -1 in diff_state:
+            reward += 0.1 * (1/(torch.sum(self.goal)//2)) * (0.90 ** self.steps) * (torch.sum(diff_state)//2)
+        else:
+            reward -= 0.1 * (1/(torch.sum(self.goal)//2)) * (0.90 ** self.steps) * (torch.sum(diff_state)//2)
+        return (reward, success)
+    
+    # Same as get_reward_1 but gives negative rewards for failure
+    def get_reward_5(self, done):
+        if self.goal is None:
+            return (torch.tensor(0.), False)
+        if done:
+            if torch.equal(self.goal, self.state.long()):
+                return (torch.tensor(1.) * (0.90**self.steps), True)
+        return (torch.tensor(-1.) * (0.90**self.steps), False)
     
     def get_examples(self, filename=f"generated7.squares"):
         import os

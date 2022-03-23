@@ -7,7 +7,7 @@ from collections import namedtuple, deque
 from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
 import numpy as np
-from sleeping import get_abstract
+from sleeping import get_abstract, find_bad_abstractions
 import pandas as pd
 import os
 
@@ -59,11 +59,11 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
         if not success:
             successful = False
         if not evaluation:
-            print("------GOAL------")
-            env.render_state(env.goal)
-            print("----------------")
-            print(f"\n-----RESULT----- in {env.steps} steps with {eps*100}% randomness")
-            env.render()
+            # print("------GOAL------")
+            # env.render_state(env.goal)
+            # print("----------------")
+            print(f"\n--RESULT, GOAL-- in {env.steps} steps with {eps*100}% randomness")
+            env.render_state_with_goal(env.state, env.goal)
             print("----------------\n\n")
         if not success and not evaluation:
             print(f"Could not solve example #{i}")
@@ -155,7 +155,7 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
         new_state = new_state[None,:]
 
         # Save transition
-        nonterminal_to_buffer = not done or steps == 99
+        nonterminal_to_buffer = not done or steps == 100
         episode_history.append(GlobalTransition(s=state, m = message, a = action, r = reward, t = nonterminal_to_buffer))
 
         ep_reward += reward
@@ -181,15 +181,15 @@ def train_loop(env, architect, builder, n_episodes,
                 device, n_examples, difficulty,
                 batch_size = 512, lim = 9, df_path = ".", n_plot_examples = 1):
     min_buffer_size = 100
-    (eps, eps_decay, eps_end) = (0.99, 0.999, 0.03)
+    (eps, eps_decay, eps_end) = (0.99, 0.9995, 0.03)
     (last_lim_change, init_lim) = (0, lim)
-    tau = 50 # Frequency of target network updates
+    tau = 200 # Frequency of target network updates
     R_avg = 0 # Running average of episodic rewards (total reward, disregarding discount factor)
     tot_steps = 0
     (trial,cleared_before) = (False,False)
     high_eps_episode = False
 
-    episode_buffer = deque(maxlen=100) # queue of entire episodes
+    episode_buffer = deque(maxlen=150) # queue of entire episodes
     for i in range(n_episodes):
         if random.randint(0,10) == 0:
             prev_eps = eps
@@ -219,13 +219,13 @@ def train_loop(env, architect, builder, n_episodes,
             #architect.training = architect.training != True
             #builder.training   = builder.training   != True
             builder.learn_symbol()
+            # print("Learnt symbols:")
+            # print(builder.symbols.items())
             
         tot_steps += steps
 
         #if R_avg > lim/(lim+1):
         if trial:
-            print("Learnt symbols:")
-            print(builder.symbols.items())
             cleared_examples = test_examples(n_examples, architect, builder, env, device, difficulty=difficulty)[0]
             # --- Record current performance ---
             if i < 1000 or i % 1000 < 50 or cleared_examples:
@@ -252,6 +252,13 @@ def train_loop(env, architect, builder, n_episodes,
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
             if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
+                actions = architect.replay_buffer.sample_latest(batch_size=10000)[1].cpu().detach().numpy()
+                bad_abstractions = find_bad_abstractions(actions, eps, architect.num_std_blocks, architect.num_actions, len(architect.catalog))
+                if len(bad_abstractions) > 0:
+                    print(f"Removing: {bad_abstractions}, due to seldom usage")
+                    [architect.catalog.pop(bad_index-architect.num_std_blocks) for bad_index in bad_abstractions]
+                    [builder.catalog.pop(bad_index-builder.num_std_blocks) for bad_index in bad_abstractions]
+                
                 abstraction = get_abstract(episode_buffer, env.size[0], grouped = env.grouped)
                 if len(abstraction) > 0:
                     abstraction = abstraction[0]
