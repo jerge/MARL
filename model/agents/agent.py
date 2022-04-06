@@ -57,6 +57,7 @@ class Agent(ABC):
 
     # Checks through the entire replay_buffer to see if a symbol has been properly learnt
     def learn_symbol(self):
+        added = False
         threshold = 0.95
         # state -> Counter() :: action -> int
         state_dict = dict()
@@ -81,7 +82,9 @@ class Agent(ABC):
             for a, amount in counter.items():
                 if amount / total > threshold:
                     self.symbols[s] = a 
+                    added = True
                     print(f"Added {a} to symbol_list for state {s}")
+        return added
 
     # TODO: fixe grouped
     def to_primitives(self, sequence):

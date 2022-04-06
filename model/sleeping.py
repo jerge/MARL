@@ -1,6 +1,7 @@
 import pandas as pd
 import collections
 import csv
+from itertools import combinations
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -12,53 +13,20 @@ def get_solution(name):
 
 
 
-# Returns set containing all LCS
-# for X[0..m-1], Y[0..n-1]
-def findLCS(x, y, m, n): 
-    # construct a set to store possible LCS
-    s = set()
- 
-    # If we reaches end of either string, return
-    # a empty set
-    if m == 0 or n == 0:
-        s.add("")
-        return s
- 
-    # If the last characters of X and Y are same
-    if x[m - 1] == y[n - 1]:
- 
-        # recurse for X[0..m-2] and Y[0..n-2] in
-        # the matrix
-        tmp = findLCS(x, y, m - 1, n - 1)
- 
-        # append current character to all possible LCS
-        # of substring X[0..m-2] and Y[0..n-2].
-        for string in tmp:
-            s.add(string + x[m - 1])
- 
-    # If the last characters of X and Y are not same
-    else:
- 
-        # If LCS can be constructed from top side of
-        # the matrix, recurse for X[0..m-2] and Y[0..n-1]
-        if L[m - 1][n] >= L[m][n - 1]:
-            s = findLCS(x, y, m - 1, n)
- 
-        # If LCS can be constructed from left side of
-        # the matrix, recurse for X[0..m-1] and Y[0..n-2]
-        if L[m][n - 1] >= L[m - 1][n]:
-            tmp = findLCS(x, y, m, n - 1)
- 
-            # merge two sets if L[m-1][n] == L[m][n-1]
-            # Note s will be empty if L[m-1][n] != L[m][n-1]
-            for i in tmp:
-                s.add(i)
-    return s
+# Returns all common sequences in x and y of the largest length
+def findCS(x,y):
+    parts = [x[a:b] for a, b in combinations(range(len(x) + 1), r = 2)]
+    common = set([part for part in parts if part in y])
+    # NOTE: return common if you want all common sequences
+    if len(common) == 0:
+        return []
+    max_len = max([len(c) for c in common])
+    return [c for c in common if len(c) == max_len]
 
 def decide_abstraction(lcs,n):
     # Currently just taking n most common words
     print(lcs)
-    lengths = [word.count('0') + word.count('1') + word.count('2') for (word,count) in lcs.most_common()]
+    lengths = [word.count('0') + word.count('1') for (word,count) in lcs.most_common()]
     counts = [count for (word,count) in lcs.most_common()]
     print(lengths)
     print(counts)
@@ -140,18 +108,12 @@ def get_abstract(epochs, width, grouped = False):
             trans = ungroup_transition(trans,width)
         sols.append(trans)
 
-    # Maximum string length
-    N = 100
-    global L
-    L = [[0 for i in range(N)]
-            for j in range(N)]
     lcs = collections.Counter()
     print(sols)
     for i in range(len(sols)):
         for j in range(i, len(sols)):
-            for x in findLCS(sols[i], sols[j], len(sols[i]), len(sols[j])):
-                if not x == "":
-                    lcs[x] += 1
+            for x in findCS(sols[i], sols[j]):
+                lcs[x] += 1
     words = decide_abstraction(lcs,1)
     # MAKE THIS CORRECT
     #graph_count(lcs)

@@ -33,9 +33,11 @@ ex_end = min(end, max_size)
 
 ex_start = 0 if n_args <= 5 else int(sys.argv[5]) # Amount of examples deemed correct
 
-suffix = "" if n_args <= 6 else sys.argv[6]
+suffix = "" if n_args <= 6 or sys.argv[6] == 'no' else sys.argv[6]
 
-testing = False if n_args <= 7 else bool(sys.argv[7])
+supervise = False if n_args <= 7 else bool(sys.argv[7])
+
+testing = False if n_args <= 8 else bool(sys.argv[8])
 
 #/-----Sys args----\
 
@@ -46,9 +48,9 @@ grouped_actions = env.action_space
 num_actions = grouped_actions[0].n * grouped_actions[1].n
 num_states = env.size
 
-num_episodes = 300000000
+num_episodes = 100000
 
-max_catalog_size = 4
+max_catalog_size = 3
 name=f"{env.size[0]}{a_network_type[:3]}{b_network_type[:3]}{difficulty[:3]}{max_catalog_size}"
 # num_states, num_actions, num_channels, device, network_type, catalog = [], max_catalog_size = 0, learning_rate = 0.9
 architect   = Architect(num_states,                    num_actions, 2, device, a_network_type, training = True, max_catalog_size = max_catalog_size, grouped = True)
@@ -65,6 +67,10 @@ if not os.path.isfile(f'{path}/a{ex_start}{suffix}.saved'):
 if not os.path.isfile(f'{path}/b{ex_start}{suffix}.saved'):
     torch.save(builder.dqn.online_model.state_dict(),   f"{path}/b{ex_start}{suffix}.saved")
 
+if ex_start != 0 and os.path.isfile(f"{path}/a{ex_start}.replay") and os.path.isfile(f"{path}/b{ex_start}.replay"):
+    architect.replay_buffer.load(f"{path}/a{ex_start}.replay")
+    builder.replay_buffer.load(f"{path}/b{ex_start}.replay")
+
 for i in range(ex_start, ex_end):
     # Object holding our online / offline Q-Networks
     architect.dqn.online_model.load_state_dict( torch.load(f"{path}/a{i}{suffix}.saved"))
@@ -74,6 +80,11 @@ for i in range(ex_start, ex_end):
     builder.dqn.online_model.load_state_dict(   torch.load(f"{path}/b{i}{suffix}.saved"))
     builder.dqn.offline_model.load_state_dict(  torch.load(f"{path}/b{i}{suffix}.saved"))
     import_catalog(f"{path}/b{i}{suffix}", builder)
+
+    if supervise:
+        supervise_location = f"./gym_builderarch/envs/supervised_play/{difficulty}{env.size[0]}.replay"
+        n_loaded = architect.replay_buffer.load(supervise_location)
+        print(f'Loaded {n_loaded} supervised transitions to the architect')
 
     if testing:
         #n_examples, architect, builder, env, device, difficulty="normal", pretty_test=False
@@ -100,4 +111,7 @@ for i in range(ex_start, ex_end):
         save_catalog(f"{path}/a{i}_interrupted", architect.catalog)
         save_catalog(f"{path}/b{i}_interrupted", builder.catalog)
         break
-    
+
+#store(self, path, amount, replace = True):
+architect.replay_buffer.store(f"{path}/a{i}.replay", architect.replay_buffer.buffer_length)
+builder.replay_buffer.store(f"{path}/b{i}.replay"  , builder.replay_buffer.buffer_length)

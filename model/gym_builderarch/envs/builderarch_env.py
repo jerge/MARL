@@ -14,7 +14,7 @@ class BuilderArchEnv(gym.Env):
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 50}
     def __init__(self):
         self.goal = None
-        self.size = (5,5)
+        self.size = (6,6)
         self.loc = 0
         self.grouped = True
         if self.grouped:

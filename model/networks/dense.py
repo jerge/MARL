@@ -103,42 +103,33 @@ class GaussianNoise(nn.Module):
         return x 
 
 class DenseNoiseNetwork(nn.Module):
-    # [Goal,State] -> num_actions
     def __init__(self, num_states, num_actions, num_channels):
         super().__init__()
         self._num_states = num_states
         self._num_actions = num_actions
         self._num_channels = num_channels
-
-        # self.noise_transform = transforms.Compose([
-        #     transforms.Normalize((0.,), (1.,)),
-        #     GaussianNoise(0.1)])
         # (Batch, Number Channels, height, width)
         self.layer1 = nn.Sequential(
-            nn.Linear(num_states * num_channels, num_states * 4),
+            nn.Linear(num_states * num_channels, num_states * 16),
             nn.ReLU())
         self.layer2 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
-            nn.ReLU(),
-            #self.noise_transform())
-            #nn.BatchNorm1d(num_states * 4),
-            #transforms.Normalize((0.), (1.)),
-            GaussianNoise(0.1))
+            nn.Linear(num_states * 16, num_states * 16),
+            nn.ReLU())
         self.layer3 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
-            nn.ReLU(),
-            )#self.noise_transform())
+            nn.Linear(num_states * 16, num_states * 16),
+            nn.ReLU())
         self.layer4 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states * 4),
-            nn.ReLU(),
-            )#self.noise_transform())
+            nn.Linear(num_states * 16, num_states * 16),
+            nn.ReLU())
         self.layer5 = nn.Sequential(
-            nn.Linear(num_states * 4, num_states),
+            nn.Linear(num_states * 16, num_states),
             nn.ReLU())
         self.layer6 = nn.Linear(num_states, num_actions)
 
+        self.blur = transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2))
+
     def forward(self, state):
-        h = state
+        h = self.blur(state)
         h = torch.flatten(h,start_dim=1) # start_dim to maintain batch size
         h = self.layer1(h)
         h = self.layer2(h)
@@ -148,7 +139,6 @@ class DenseNoiseNetwork(nn.Module):
         h = self.layer6(h)
         q_values = h
         return q_values
-
 
 # [Goal,State] -> num_actions
 class SmallDenseNoiseNetwork(nn.Module):

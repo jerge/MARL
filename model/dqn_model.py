@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from collections import deque
+from collections import namedtuple, deque
 import numpy as np
 import networks
 
@@ -22,6 +22,32 @@ class ExperienceReplay:
         :return:
         '''
         self.__buffer.append(transition)
+    
+    def store(self, path, amount, replace = True):
+        if not replace:
+            amount += self.load(path)
+        s,a,r,next_s,t = self.sample_latest(amount)
+        m = {'s': s, 'a': a, 'r': r, 'next_s': next_s, 't': t}
+        torch.save(m, path)
+    
+    # Returns the amount of loaded transitions
+    def load(self, path):
+        m = torch.load(path)
+        state_batch = m['s']
+        action_batch = m['a']
+        reward_batch = m['r']
+        next_state_batch = m['next_s']
+        nonterminal_batch = m['t']
+
+        Transition = namedtuple("Transition",["s","a", "r", "next_s", "t"])
+        for i in range(state_batch.shape[0]):
+            transition = Transition(s       = state_batch[i],
+                                    a       = action_batch[i],
+                                    r       = reward_batch[i],
+                                    next_s  = next_state_batch[i],
+                                    t       = nonterminal_batch[i])
+            self.add(transition)
+        return state_batch.shape[0]
 
     def sample_latest(self, batch_size=128):
         if type(self._num_states) == int:

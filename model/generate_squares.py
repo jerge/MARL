@@ -13,8 +13,8 @@ env = gym.make('BuilderArch-v1')
 
 states = []
 steps = 0
-for n_blocks in range(1,10):
-    max_amount = 10
+for n_blocks in range(1,6):
+    max_amount = 20
     for x in range(max_amount):
         steps += 1 # Counter for the name
         env.reset(n=1, difficulty = "template")

@@ -9,8 +9,9 @@ class Builder(Agent):
     def init(self):
         # NOTE: Make the catalog actions non-symbolic
         standard_messages = [tuple(np.eye(self.max_actions(), dtype=float)[i]) for i in \
-                                                            range(self.max_actions())]
-        #standard_messages = [tuple(np.eye(self.num_actions + self.max_catalog_size, dtype=float)[i]) for i in range(self.num_actions)]
+                                                            range(self.available_actions())]
+        # standard_messages = [tuple(np.eye(self.max_actions(), dtype=float)[i]) for i in \
+        #                                                     range(self.max_actions())]
         for i, message in enumerate(standard_messages):
             self.symbols[message] = i
         print(self.symbols.items())
