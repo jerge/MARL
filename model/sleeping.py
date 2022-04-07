@@ -30,6 +30,8 @@ def decide_abstraction(lcs,n):
     counts = [count for (word,count) in lcs.most_common()]
     print(lengths)
     print(counts)
+    if len(counts) == 0:
+        return []
     z = np.polyfit(lengths, counts, 2)
     p = np.poly1d(z)
     
