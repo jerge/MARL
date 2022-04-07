@@ -7,7 +7,7 @@ import sys
 from agents import Architect, Builder
 from sleeping import save_catalog, import_catalog
 
-if torch.cuda.is_available():
+if False:#torch.cuda.is_available():
     print('cuda')
     device = torch.device("cuda")
 else:
@@ -83,8 +83,9 @@ for i in range(ex_start, ex_end):
 
     if supervise:
         supervise_location = f"./gym_builderarch/envs/supervised_play/{difficulty}{env.size[0]}.replay"
-        n_loaded = architect.replay_buffer.load(supervise_location)
-        print(f'Loaded {n_loaded} supervised transitions to the architect')
+        for j in range(100):
+            n_loaded = architect.replay_buffer.load(supervise_location)
+        print(f'Loaded {n_loaded} supervised transitions to the architect, 100 times')
 
     if testing:
         #n_examples, architect, builder, env, device, difficulty="normal", pretty_test=False
