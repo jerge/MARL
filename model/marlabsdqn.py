@@ -251,7 +251,7 @@ def train_loop(env, architect, builder, n_episodes,
             # If fail, increase catalog size
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
-            if random.randint(0,len(architect.catalog)) == 0 and i > 10000 and False: # TODO temp
+            if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
                 actions = architect.replay_buffer.sample_latest(batch_size=10000)[1].cpu().detach().numpy()
                 bad_abstractions = find_bad_abstractions(actions, eps, architect.num_std_blocks, architect.num_actions, len(architect.catalog))
                 if len(bad_abstractions) > 0:

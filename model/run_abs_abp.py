@@ -48,7 +48,7 @@ grouped_actions = env.action_space
 num_actions = grouped_actions[0].n * grouped_actions[1].n
 num_states = env.size
 
-num_episodes = 100000
+num_episodes = 1000000
 
 max_catalog_size = 3
 name=f"{env.size[0]}{a_network_type[:3]}{b_network_type[:3]}{difficulty[:3]}{max_catalog_size}"
@@ -99,6 +99,7 @@ for i in range(ex_start, ex_end):
             torch.save(builder.dqn.online_model.state_dict(), f"{path}/b{i+1}_unsuc.saved")
             save_catalog(f"{path}/a{i+1}_unsuc", architect.catalog)
             save_catalog(f"{path}/b{i+1}_unsuc", builder.catalog)
+            break
         else:
             torch.save(architect.dqn.online_model.state_dict(), f"{path}/a{i+1}.saved")
             torch.save(builder.dqn.online_model.state_dict(), f"{path}/b{i+1}.saved")
