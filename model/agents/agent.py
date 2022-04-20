@@ -58,13 +58,14 @@ class Agent(ABC):
     # Checks through the entire replay_buffer to see if a symbol has been properly learnt
     def learn_symbol(self):
         added = False
-        threshold = 0.95
+        threshold = 0.95 # The percentage needed to determine if the agent is confident in the s,a mapping
+        amount_threshold = 20 # The minimum amount of s,a mappings to consider if it is useful.
         # state -> Counter() :: action -> int
         state_dict = dict()
         
         batch_size = 10000
         if self.replay_buffer.buffer_length < batch_size:
-            return
+            return False
         rb = self.replay_buffer.sample_minibatch(batch_size=batch_size)
         for i in range(batch_size):
             s = rb[0][i][0]
@@ -80,7 +81,7 @@ class Agent(ABC):
         for s, counter in state_dict.items():
             total = sum(counter.values())
             for a, amount in counter.items():
-                if amount / total > threshold:
+                if amount / total > threshold and amount > amount_threshold:
                     self.symbols[s] = a 
                     added = True
                     print(f"Added {a} to symbol_list for state {s}")

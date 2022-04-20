@@ -50,6 +50,8 @@ class ExperienceReplay:
         return state_batch.shape[0]
 
     def sample_latest(self, batch_size=128):
+        if batch_size > self.buffer_length:
+            batch_size = self.buffer_length
         if type(self._num_states) == int:
             state_batch = torch.zeros([batch_size,self._input_channels, self._num_states],
                                dtype=torch.float)

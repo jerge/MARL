@@ -7,7 +7,8 @@ from collections import namedtuple, deque
 from dqn_model import DeepQLearningModel, ExperienceReplay
 import random
 import numpy as np
-from sleeping import get_abstract, find_bad_abstractions
+from sleeping import generate_abstraction, find_bad_abstractions
+from dreaming import dream
 import pandas as pd
 import os
 
@@ -43,8 +44,8 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
             
             # B: Generate action from message
             q_b, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False, symbolic = True) # eps
-            action = torch.argmax(action_one_hot[:builder.available_actions()])
-            action_one_hot = action_one_hot[None,:]
+            action = message#torch.argmax(action_one_hot[:builder.available_actions()])
+            action_one_hot = message_one_hot#action_one_hot[None,:]
             #action = message # TODO TEMP
             # Env: Take action
             (new_state, reward, done, success) = builder.build(action, env)
@@ -96,8 +97,11 @@ def calculate_q_targets(q1_batch, r_batch, nonterminal_batch, gamma=.99):
     Y = r_batch + nonterminal_batch.long() * gamma * (torch.max(q1_batch,dim=1)[0])
     return Y
 
-def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device):
-    curr_state, curr_action, reward, next_state, nonterminal = replay_buffer.sample_minibatch(batch_size)
+def sample_batch_and_calculate_loss(dqn, replay_buffer, batch_size, gamma, device, sample_latest = False):
+    if sample_latest:
+        curr_state, curr_action, reward, next_state, nonterminal = replay_buffer.sample_latest(batch_size)
+    else:
+        curr_state, curr_action, reward, next_state, nonterminal = replay_buffer.sample_minibatch(batch_size)
 
     q_online_curr = dqn.online_model(curr_state.to(device=device)).cpu()
     with torch.no_grad():
@@ -137,15 +141,16 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
             with torch.no_grad():
                 _, message_one_hot = calc_q_and_take_action(architect, state, eps_end, device)
         message = torch.argmax(message_one_hot)#[:architect.num_actions + len(architect.catalog)])
+        action_one_hot = message_one_hot
         message_one_hot = message_one_hot[None,:]
         
         # B: Generate action from message
-        if builder.training:
-            with torch.no_grad():
-                _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, symbolic = True) # eps
-        else:
-            with torch.no_grad():
-                _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device, symbolic = True)
+        # if builder.training:
+        #     with torch.no_grad():
+        #         _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, symbolic = True) # eps
+        # else:
+        #     with torch.no_grad():
+        #         _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device, symbolic = True)
         action = torch.argmax(action_one_hot)#[:builder.num_actions + len(builder.catalog)])
         action_one_hot = action_one_hot[None,:]
         #action = message # TODO Temp
@@ -216,11 +221,11 @@ def train_loop(env, architect, builder, n_episodes,
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
             trial = True
-            architect.training = architect.training != True
-            builder.training   = builder.training   != True
-            builder.learn_symbol()
-            # print("Learnt symbols:")
-            # print(builder.symbols.items())
+            #architect.training = architect.training != True
+            #builder.training   = builder.training   != True
+            #if builder.learn_symbol():
+            #    print("Learnt symbols:")
+            #    print(builder.symbols.items())
             
         tot_steps += steps
 
@@ -251,19 +256,23 @@ def train_loop(env, architect, builder, n_episodes,
             # If fail, increase catalog size
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
-            if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
+            if random.randint(0,len(architect.catalog)) == 0 and i > 1000:
+                abstractions = generate_abstraction(episode_buffer, env.size[0], architect.catalog, grouped = env.grouped)
+                if len(abstractions) > 0:
+                    abstraction = abstractions[0]
+                    architect.increase_catalog(abstraction)
+                    builder.increase_catalog(abstraction)
+                    dream(architect, builder, abstractions, env, episode_buffer, device)
+
+
                 actions = architect.replay_buffer.sample_latest(batch_size=10000)[1].cpu().detach().numpy()
                 bad_abstractions = find_bad_abstractions(actions, eps, architect.num_std_blocks, architect.num_actions, len(architect.catalog))
                 if len(bad_abstractions) > 0:
-                    print(f"Removing: {bad_abstractions}, due to seldom usage")
+                    print(f"Removing: Catalog action(s) {bad_abstractions}, due to seldom usage")
+                    print(builder.catalog)
                     [architect.catalog.pop(bad_index-architect.num_std_blocks) for bad_index in bad_abstractions]
                     [builder.catalog.pop(bad_index-builder.num_std_blocks) for bad_index in bad_abstractions]
                 
-                abstraction = get_abstract(episode_buffer, env.size[0], grouped = env.grouped)
-                if len(abstraction) > 0:
-                    abstraction = abstraction[0]
-                    architect.increase_catalog(abstraction)
-                    builder.increase_catalog(abstraction)
 
             lim += 1
             trial = False
