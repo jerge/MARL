@@ -46,7 +46,6 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
             q_b, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps, device, debug=False, symbolic = True) # eps
             action = message#torch.argmax(action_one_hot[:builder.available_actions()])
             action_one_hot = message_one_hot#action_one_hot[None,:]
-            #action = message # TODO TEMP
             # Env: Take action
             (new_state, reward, done, success) = builder.build(action, env)
             ep_reward += reward
@@ -153,7 +152,6 @@ def wake(env, architect, builder, episode_buffer, eps, eps_end, tau, batch_size,
         #         _, action_one_hot = calc_q_and_take_action(builder, message_one_hot, eps_end, device, symbolic = True)
         action = torch.argmax(action_one_hot)#[:builder.num_actions + len(builder.catalog)])
         action_one_hot = action_one_hot[None,:]
-        #action = message # TODO Temp
 
         # Env: Take action
         (new_state, reward, done, success) = builder.build(action, env)
@@ -194,7 +192,7 @@ def train_loop(env, architect, builder, n_episodes,
     (trial,cleared_before) = (False,False)
     high_eps_episode = False
 
-    episode_buffer = deque(maxlen=150) # queue of entire episodes
+    episode_buffer = deque(maxlen=500) # queue of entire episodes
     for i in range(n_episodes):
         if random.randint(0,10) == 0:
             prev_eps = eps
@@ -221,11 +219,11 @@ def train_loop(env, architect, builder, n_episodes,
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
             trial = True
-            #architect.training = architect.training != True
-            #builder.training   = builder.training   != True
-            #if builder.learn_symbol():
-            #    print("Learnt symbols:")
-            #    print(builder.symbols.items())
+            # architect.training = architect.training != True
+            # builder.training   = builder.training   != True
+            # if builder.learn_symbol():
+            #     print("Learnt symbols:")
+            #     print(builder.symbols.items())
             
         tot_steps += steps
 
@@ -256,22 +254,22 @@ def train_loop(env, architect, builder, n_episodes,
             # If fail, increase catalog size
             # Currently hard coded to always return the #1 most common LCS
             # NOTE: Will not count "33", "3" the same as "3","3","3"
-            if random.randint(0,len(architect.catalog)) == 0 and i > 1000:
+            if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
                 abstractions = generate_abstraction(episode_buffer, env.size[0], architect.catalog, grouped = env.grouped)
                 if len(abstractions) > 0:
                     abstraction = abstractions[0]
                     architect.increase_catalog(abstraction)
                     builder.increase_catalog(abstraction)
                     dream(architect, builder, abstractions, env, episode_buffer, device)
-
-
-                actions = architect.replay_buffer.sample_latest(batch_size=10000)[1].cpu().detach().numpy()
-                bad_abstractions = find_bad_abstractions(actions, eps, architect.num_std_blocks, architect.num_actions, len(architect.catalog))
-                if len(bad_abstractions) > 0:
-                    print(f"Removing: Catalog action(s) {bad_abstractions}, due to seldom usage")
-                    print(builder.catalog)
-                    [architect.catalog.pop(bad_index-architect.num_std_blocks) for bad_index in bad_abstractions]
-                    [builder.catalog.pop(bad_index-builder.num_std_blocks) for bad_index in bad_abstractions]
+                else:
+                    actions = architect.replay_buffer.sample_latest(batch_size=1000)[1].cpu().detach().numpy()
+                    bad_abstractions = find_bad_abstractions(actions, eps, architect.num_std_blocks, architect.num_actions, len(architect.catalog))
+                    if len(bad_abstractions) > 0:
+                        print(f"Removing: Catalog action(s) {bad_abstractions}, due to seldom usage")
+                        print(builder.catalog)
+                        print(bad_index-builder.num_std_blocks)
+                        [architect.catalog.pop(bad_index-architect.num_std_blocks) for bad_index in bad_abstractions]
+                        [builder.catalog.pop(bad_index-builder.num_std_blocks) for bad_index in bad_abstractions]
                 
 
             lim += 1

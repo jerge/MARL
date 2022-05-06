@@ -136,6 +136,7 @@ def group_transition(ungrouped_transition, width, loc):
             loc += 1
     return grouped_transition
 
+# Extracts primitives from catalog actions
 def flatten_sequence(action_sequence, width, catalog, std_blocks = 2):
     flattened_sequence = []
     for a in action_sequence:
@@ -180,6 +181,8 @@ def generate_abstraction(epochs, width, catalog, grouped = True):
     ratings = [len(candidate) * amount for candidate, amount in candidates.items()]
     i = np.argmax(ratings)
     print(ratings)
+    if len(list(candidates.keys())[i]) <= 1:
+        return []
     return [ungroup_transition(list(candidates.keys())[i], width, catalog)]
 
 #<deprecated>

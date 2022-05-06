@@ -1,6 +1,7 @@
 import os
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import text
 import matplotlib.patches as mpatches
 import pandas as pd
 import numpy as np
@@ -16,8 +17,8 @@ paths = sys.argv[2:]
 fig, axs = plt.subplots(len(paths))
 if len(paths) <= 1:
     axs = [axs]
-repeats = 8
-colors = ["red", "blue", "orange", "cyan", "magenta"] * repeats
+max_repeats = 8
+colors = ["red", "blue", "orange", "cyan", "magenta"] * max_repeats
 
 plt.subplots_adjust(left=0.1,
                     bottom=0.1, 
@@ -30,7 +31,7 @@ plt.subplots_adjust(left=0.1,
 for i,path in enumerate(paths):
     ax = axs[i]
     t = str(re.search('\d+$', paths[i]).group())
-    ax.set_title(f"{t} abstractions")
+    ax.set_title(f"{t} Abstractions")
     ax.set_xlabel('Iterations')
     ax.xaxis.set_label_coords(0.5, 0.1)
     ax.set_ylabel('#Examples cleared')
@@ -47,7 +48,7 @@ for i,path in enumerate(paths):
         steps += df['num_episodes'].max()
         blocks = int(torch.sum(examples[n-1][1]))//2
         used_blocks.append(blocks)
-        if os.path.isfile(f'{path}/a{n}.csv'):
+        if os.path.isfile(f'{path}/a{n}.saved'):
             ax.scatter(steps, n, c = colors[blocks-1])
         else:
             ax.scatter(steps, n, c = 'gray')
@@ -58,4 +59,9 @@ for i,path in enumerate(paths):
         ax.legend(handles = [mpatches.Patch(color='gray', label = f'timed out')] + ps) 
     else:
         ax.legend(handles = ps)
+    # HARDCODED FROM TERMINAL INPUT. FORGOT TO SAVE IT IN FILES
+    catalog_additions = []# [(1032,'Upside-down U'), (143050, 'C'), (144050,' ')]
+    for (x_loc,action) in catalog_additions:
+        plt.vlines(x=x_loc, ymin=0, ymax=n, color = 'gray')
+        text(x_loc+50, n/2, action, rotation = 90, verticalalignment='center')
 plt.show()
