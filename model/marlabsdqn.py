@@ -59,9 +59,6 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
         if not success:
             successful = False
         if not evaluation:
-            # print("------GOAL------")
-            # env.render_state(env.goal)
-            # print("----------------")
             print(f"\n--RESULT, GOAL-- in {env.steps} steps with {eps*100}% randomness")
             env.render_state_with_goal(env.state, env.goal)
             print("----------------\n\n")
@@ -75,7 +72,6 @@ def test_examples(n_examples, architect, builder, env, device, difficulty="norma
 def eps_greedy_policy(q_values, eps):
     if random.random() < eps:
         r = random.randint(0,q_values.shape[1]-1)
-        #print(r)
         return r
     return torch.argmax(q_values)
 
@@ -214,7 +210,6 @@ def train_loop(env, architect, builder, n_episodes,
             print('Episode: {:d}, #Ex: {:.0f}, Steps: {: 3d}, Ep Reward (running avg): {:4.0f} ({:.2f}) Eps: {:.3f}, Trainee: {}, Cat: {}, #Symb: {}'.format(
                                                                                     i, n_examples, steps, ep_reward, R_avg, eps, t, 
                                                                                     architect.catalog, len(builder.symbols.keys())))
-        #reward_df = reward_df.append({"num_episodes" : i,"R_avg" : float(R_avg),"n_examples" : n_examples}, ignore_index = True)
 
         # If there has been 1000 steps since last time, switch trainee and do a trial
         if (tot_steps + steps) % 1000 < tot_steps % 1000:
@@ -251,9 +246,6 @@ def train_loop(env, architect, builder, n_episodes,
                     return R_avg, False
                 cleared_before = True
             print("---------------------------------")
-            # If fail, increase catalog size
-            # Currently hard coded to always return the #1 most common LCS
-            # NOTE: Will not count "33", "3" the same as "3","3","3"
             if random.randint(0,len(architect.catalog)) == 0 and i > 10000:
                 abstractions = generate_abstraction(episode_buffer, env.size[0], architect.catalog, grouped = env.grouped)
                 if len(abstractions) > 0:

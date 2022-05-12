@@ -7,6 +7,7 @@ import sys
 from agents import Architect, Builder
 from sleeping import save_catalog, import_catalog
 
+# Currently the program does not seem to be significantly faster on GPU
 if False:#torch.cuda.is_available():
     print('cuda')
     device = torch.device("cuda")
@@ -60,8 +61,6 @@ path = f"./model_checkpoints/{name}"
 if not os.path.exists(path):
     os.makedirs(path)
 
-# a_dqn.online_model.load_state_dict(torch.load( f"{path}/a{ex_start}_interrupted.saved"))
-# a_dqn.offline_model.load_state_dict(torch.load(f"{path}/a{ex_start}_interrupted.saved"))
 if not os.path.isfile(f'{path}/a{ex_start}{suffix}.saved'):
     torch.save(architect.dqn.online_model.state_dict(), f"{path}/a{ex_start}{suffix}.saved")
 if not os.path.isfile(f'{path}/b{ex_start}{suffix}.saved'):

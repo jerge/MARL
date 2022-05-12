@@ -1,3 +1,0 @@
-num_episodes,R_avg_tot,R_avg_curr
-767,0.3537000715732574,tensor(0.2495)
-1555,0.47370001673698425,tensor(0.6072)
